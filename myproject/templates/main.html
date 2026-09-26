@@ -1,11 +1,18 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SkySnap shows live weather, local time and conditions for any city in the world.">
+  <meta name="theme-color" content="#0c2150">
+  <title>{% block title %}SkySnap · Live weather{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/logo.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body>
-    {% block content %}{% endblock %}
+<body data-sky="{% block sky %}default{% endblock %}">
+  {% block content %}{% endblock %}
 </body>
 </html>

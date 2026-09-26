@@ -1,0 +1,22 @@
+# Secrets: .env holds your API key and must never be committed
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Django
+db.sqlite3
+staticfiles/
+*.log
+
+# Editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

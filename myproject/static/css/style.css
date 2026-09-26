@@ -1,0 +1,528 @@
+/* ==========================================================================
+   SkySnap styles
+   ========================================================================== */
+
+/* ---- Design tokens ------------------------------------------------------- */
+
+:root {
+  /* Page sky. Swapped per weather condition by the [data-sky] rules below. */
+  --sky-top: #06122b;
+  --sky-mid: #0c2150;
+  --sky-bottom: #081830;
+  --glow: rgba(74, 130, 196, 0.30);
+
+  --text: #eef5ff;
+  --text-soft: #c3d7f2;
+  --text-muted: #8fb0dc;
+  --accent: #6aaaf0;
+
+  --button: #2468c4;
+  --button-hover: #2a70cf;
+
+  --glass: rgba(6, 16, 40, 0.55);
+  --tile: rgba(255, 255, 255, 0.05);
+  --line: rgba(160, 200, 255, 0.16);
+
+  --danger: #ffb4b4;
+  --danger-line: rgba(255, 130, 130, 0.35);
+  --warn-text: #ffe2a8;
+  --warn-bg: rgba(255, 196, 80, 0.10);
+  --warn-line: rgba(255, 196, 80, 0.32);
+
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+
+  --font-display: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  color-scheme: dark;
+}
+
+body[data-sky="clear"]  { --sky-top: #0a3d8f; --sky-mid: #1a64c4; --sky-bottom: #0b2f6b; --glow: rgba(255, 200, 90, 0.38); }
+body[data-sky="night"]  { --sky-top: #030a1c; --sky-mid: #0a1a42; --sky-bottom: #050d24; --glow: rgba(200, 215, 255, 0.16); }
+body[data-sky="clouds"] { --sky-top: #1a2740; --sky-mid: #2b3d5c; --sky-bottom: #141e33; --glow: rgba(190, 210, 240, 0.16); }
+body[data-sky="rain"]   { --sky-top: #0b1a2e; --sky-mid: #16304f; --sky-bottom: #0a1626; --glow: rgba(90, 150, 220, 0.22); }
+body[data-sky="storm"]  { --sky-top: #0d0b1f; --sky-mid: #241a45; --sky-bottom: #0b0a1a; --glow: rgba(170, 130, 255, 0.24); }
+body[data-sky="snow"]   { --sky-top: #1b2c4a; --sky-mid: #36507a; --sky-bottom: #1a2a45; --glow: rgba(230, 240, 255, 0.26); }
+body[data-sky="mist"]   { --sky-top: #1c2233; --sky-mid: #33405a; --sky-bottom: #1a1f2e; --glow: rgba(210, 218, 230, 0.16); }
+
+
+/* ---- Base ---------------------------------------------------------------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--sky-mid);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A fixed layer instead of background-attachment: fixed, which iOS ignores. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 85% 6%, var(--glow) 0%, transparent 42%),
+    linear-gradient(170deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-bottom) 100%);
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.ic {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.30);
+  white-space: nowrap;
+}
+
+
+/* ---- Layout -------------------------------------------------------------- */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 520px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: clamp(28px, 7vh, 64px) 16px 28px;
+}
+
+.content { flex: 1; }
+
+
+/* ---- Brand --------------------------------------------------------------- */
+
+.brand {
+  display: flex;
+  justify-content: center;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+}
+
+.brand-logo {
+  width: 46px;
+  height: 46px;
+}
+
+.brand-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.3px;
+}
+
+.brand-tag {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+
+/* ---- Search -------------------------------------------------------------- */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 18px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search:focus-within {
+  border-color: rgba(106, 170, 240, 0.60);
+  box-shadow: 0 0 0 4px rgba(106, 170, 240, 0.16);
+}
+
+.search > .ic {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  font: inherit;
+  font-size: 16px; /* 16px or more stops iOS from zooming in on focus. */
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.search input::placeholder {
+  color: var(--text-muted);
+}
+
+.search button {
+  flex-shrink: 0;
+  padding: 11px 22px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--button);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.search button:hover { background: var(--button-hover); }
+.search button:active { transform: scale(0.97); }
+
+
+/* ---- Cards --------------------------------------------------------------- */
+
+.card {
+  padding: 26px 20px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+@media (min-width: 480px) {
+  .card { padding: 32px; }
+}
+
+
+/* ---- Weather card -------------------------------------------------------- */
+
+.place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.place-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.country {
+  padding: 3px 9px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: var(--radius-pill);
+}
+
+.when {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.when .ic { margin-top: 3px; }
+
+.now {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.temp {
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--font-display);
+  line-height: 0.9;
+}
+
+.temp-value {
+  font-size: clamp(76px, 22vw, 108px);
+  font-weight: 300;
+  letter-spacing: -0.04em;
+}
+
+.temp-unit {
+  margin: 0.35em 0 0 0.15em;
+  font-size: clamp(22px, 6vw, 30px);
+  color: var(--text-soft);
+}
+
+.now-icon {
+  width: clamp(96px, 30vw, 128px);
+  height: auto;
+  margin: -12px -14px -12px 0;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.30));
+}
+
+.condition {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.feels {
+  font-size: 15px;
+  color: var(--text-soft);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 560px) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.stat {
+  padding: 14px;
+  background: var(--tile);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.stat dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.stat dd {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.stat dd small {
+  margin-left: 3px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-soft);
+}
+
+.stat-note {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+
+/* ---- Welcome card -------------------------------------------------------- */
+
+.welcome { text-align: center; }
+
+.welcome-art {
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+}
+
+.welcome h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.welcome > p {
+  margin-top: 8px;
+  color: var(--text-soft);
+}
+
+.welcome > .setup {
+  margin-top: 22px;
+  padding: 14px 16px;
+  font-size: 14px;
+  text-align: left;
+  color: var(--warn-text);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius-md);
+}
+
+.setup strong { color: #fff3d6; }
+
+
+/* ---- Error card ---------------------------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-color: var(--danger-line);
+}
+
+.notice-icon {
+  width: 26px;
+  height: 26px;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.notice-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.notice-text {
+  margin-top: 4px;
+  color: var(--text-soft);
+}
+
+.notice .chips { justify-content: flex-start; }
+
+
+/* ---- City chips ---------------------------------------------------------- */
+
+.welcome > .chips-label,
+.chips-label {
+  margin-top: 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chip {
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.chip:hover {
+  color: var(--text);
+  background: rgba(106, 170, 240, 0.18);
+  border-color: rgba(106, 170, 240, 0.45);
+}
+
+
+/* ---- Footer -------------------------------------------------------------- */
+
+.footer {
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.footer a {
+  color: var(--text-soft);
+  text-underline-offset: 3px;
+}
+
+.footer a:hover { color: var(--text); }
+
+
+/* ---- Motion -------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: rise 0.45s ease-out both; }
+  .now-icon { animation: drift 6s ease-in-out infinite; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+@keyframes drift {
+  50% { transform: translateY(-6px); }
+}

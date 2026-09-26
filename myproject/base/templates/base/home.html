@@ -1,0 +1,136 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}{% if weather %}{{ weather.city }} · {{ weather.temp }}°C · SkySnap{% else %}SkySnap · Live weather{% endif %}{% endblock %}
+
+{% block sky %}{% if weather %}{{ weather.sky }}{% else %}default{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <header class="brand">
+    <a class="brand-link" href="{% url 'home' %}">
+      <img class="brand-logo" src="{% static 'img/logo.svg' %}" alt="" width="46" height="46">
+      <span>
+        <span class="brand-name">SkySnap</span>
+        <span class="brand-tag">Live weather</span>
+      </span>
+    </a>
+  </header>
+
+  <form class="search" action="{% url 'home' %}" method="get" role="search">
+    <label class="sr-only" for="city">City name</label>
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="city" type="text" name="city_name" value="{{ city }}" placeholder="Search any city…"
+           maxlength="100" enterkeyhint="search" spellcheck="false" required{% if not weather %} autofocus{% endif %}>
+    <button type="submit">Snap it</button>
+  </form>
+
+  <main class="content">
+    {% if weather %}
+
+      <article class="card weather" aria-labelledby="place">
+        <header>
+          <h1 class="place" id="place">
+            <span class="place-name">{{ weather.city }}</span>
+            {% if weather.country %}<span class="country">{{ weather.country }}</span>{% endif %}
+          </h1>
+          <p class="when">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            {{ weather.local_date }} · {{ weather.local_time }} local time
+          </p>
+        </header>
+
+        <div class="now">
+          <p class="temp">
+            <span class="temp-value">{{ weather.temp|default_if_none:"–" }}</span><span class="temp-unit">°C</span>
+          </p>
+          {% if weather.icon %}
+            <img class="now-icon" src="https://openweathermap.org/img/wn/{{ weather.icon }}@4x.png" alt="" width="128" height="128">
+          {% endif %}
+        </div>
+        <p class="condition">{{ weather.description }}</p>
+        {% if weather.feels_like is not None %}
+          <p class="feels">Feels like {{ weather.feels_like }}°C</p>
+        {% endif %}
+
+        <dl class="stats">
+          <div class="stat">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Humidity</dt>
+            <dd>{% if weather.humidity is not None %}{{ weather.humidity }}<small>%</small>{% else %}—{% endif %}</dd>
+          </div>
+          <div class="stat">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>Wind</dt>
+            <dd>
+              {% if weather.wind_speed is not None %}{{ weather.wind_speed }}<small>km/h</small>{% else %}—{% endif %}
+              {% if weather.wind_direction %}<span class="stat-note">from {{ weather.wind_direction }}</span>{% endif %}
+            </dd>
+          </div>
+          <div class="stat">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>Pressure</dt>
+            <dd>{% if weather.pressure is not None %}{{ weather.pressure }}<small>hPa</small>{% else %}—{% endif %}</dd>
+          </div>
+          <div class="stat">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Visibility</dt>
+            <dd>{% if weather.visibility is not None %}{{ weather.visibility|floatformat:"-1" }}<small>km</small>{% else %}—{% endif %}</dd>
+          </div>
+          <div class="stat">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v7"/><path d="m4.22 10.22 1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="m18.36 11.64 1.42-1.42"/><path d="M23 22H1"/><path d="m8 6 4-4 4 4"/></svg>Sunrise</dt>
+            <dd>{{ weather.sunrise|default:"—" }}</dd>
+          </div>
+          <div class="stat">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 9V2"/><path d="m4.22 10.22 1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="m18.36 11.64 1.42-1.42"/><path d="M23 22H1"/><path d="m16 5-4 4-4-4"/></svg>Sunset</dt>
+            <dd>{{ weather.sunset|default:"—" }}</dd>
+          </div>
+        </dl>
+      </article>
+
+    {% elif error %}
+
+      <section class="card notice" role="alert">
+        <svg class="ic notice-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        <div>
+          <h1 class="notice-title">Couldn't get the weather</h1>
+          <p class="notice-text">{{ error }}</p>
+          {% if not api_key_missing %}
+            <p class="chips-label">Or try one of these:</p>
+            <nav class="chips" aria-label="Popular cities">
+              {% for name in popular_cities %}
+                <a class="chip" href="{% url 'home' %}?city_name={{ name|urlencode }}">{{ name }}</a>
+              {% endfor %}
+            </nav>
+          {% endif %}
+        </div>
+      </section>
+
+    {% else %}
+
+      <section class="card welcome">
+        <img class="welcome-art" src="{% static 'img/logo.svg' %}" alt="" width="88" height="88">
+        <h1>What's the sky doing?</h1>
+        <p>Search any city in the world for live temperature, wind, humidity and local time.</p>
+
+        {% if api_key_missing %}
+          <p class="setup">
+            <strong>One step left:</strong> add your OpenWeather key to <code>.env</code> as
+            <code>API_KEY=your_key</code>, then restart the server.
+          </p>
+        {% else %}
+          <p class="chips-label">Try one of these</p>
+          <nav class="chips" aria-label="Popular cities">
+            {% for name in popular_cities %}
+              <a class="chip" href="{% url 'home' %}?city_name={{ name|urlencode }}">{{ name }}</a>
+            {% endfor %}
+          </nav>
+        {% endif %}
+      </section>
+
+    {% endif %}
+  </main>
+
+  <footer class="footer">
+    Weather data from <a href="https://openweathermap.org/" target="_blank" rel="noopener">OpenWeather</a>
+  </footer>
+
+</div>
+{% endblock %}
