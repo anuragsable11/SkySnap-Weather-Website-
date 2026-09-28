@@ -118,6 +118,10 @@
           </div>
 
         </dl>
+
+        {% if weather.map %}
+          {% include "base/location_map.html" with map=weather.map %}
+        {% endif %}
       </div>
 
     {% elif error %}

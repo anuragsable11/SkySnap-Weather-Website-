@@ -928,6 +928,208 @@ body[data-sky="clear"] .sky-fx::after {
 }
 
 
+/* ---- Location map ---------------------------------------------------------
+   OpenStreetMap tiles, darkened with a filter and tinted with the sky's
+   colour so the map matches the weather. The city sits in the centre under
+   a pin, inside faint radar rings. Spans the full width below the report.
+   -------------------------------------------------------------------------- */
+
+.report > .map-card { grid-column: 1 / -1; }
+
+.card.map-card {
+  position: relative;
+  height: clamp(280px, 34vw, 360px);
+  padding: 0;
+  overflow: hidden;
+  background: #0a1328; /* shows until the tiles arrive */
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  /* Light map -> dark map: flip the brightness, turn the colours back round,
+     then calm it down. */
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.45);
+}
+
+.map-tiles {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 256px);
+  grid-auto-rows: 256px;
+}
+
+.map-tiles > * {
+  display: block;
+  width: 256px;
+  height: 256px;
+}
+
+.map-tint {
+  position: absolute;
+  inset: 0;
+  background: var(--sky-mid);
+  mix-blend-mode: color;
+  opacity: 0.6;
+}
+
+/* Darkens the edges, and the top and bottom so the text there stays clear. */
+.map-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(6, 16, 40, 0.80), transparent 28%, transparent 68%, rgba(6, 16, 40, 0.85)),
+    radial-gradient(ellipse at center, transparent 40%, rgba(6, 16, 40, 0.60));
+}
+
+.map-radar {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 440px;
+  height: 440px;
+  margin: -220px 0 0 -220px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, transparent 0 69px, rgba(168, 212, 255, 0.14) 70px 71px);
+  -webkit-mask-image: radial-gradient(circle, #000 35%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 35%, transparent 70%);
+}
+
+.map-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--accent), 0 0 24px 8px rgba(106, 170, 240, 0.55);
+}
+
+.map-label {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  left: 50%;
+  padding: 7px 14px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text);
+  background: rgba(10, 24, 54, 0.72);
+  border: 1px solid rgba(168, 212, 255, 0.28);
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 0 var(--highlight), 0 10px 24px rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transform: translateX(-50%);
+}
+
+.map-label strong {
+  margin-left: 4px;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+
+/* The little pointer under the label. */
+.map-label::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: rgba(10, 24, 54, 0.9);
+  border: solid rgba(168, 212, 255, 0.28);
+  border-width: 0 1px 1px 0;
+  transform: rotate(45deg);
+}
+
+.map-head {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.map-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.map-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.map-open:hover {
+  background: rgba(106, 170, 240, 0.20);
+  border-color: rgba(106, 170, 240, 0.45);
+}
+
+.map-coords,
+.map-credit {
+  position: absolute;
+  bottom: 16px;
+  z-index: 2;
+}
+
+.map-coords {
+  left: 20px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.map-credit {
+  right: 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.map-credit a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 479px) {
+  .map-head { padding: 14px 16px; }
+  .map-coords { left: 16px; font-size: 13px; }
+  .map-credit { right: 16px; font-size: 10px; }
+}
+
+
 /* ---- Welcome ------------------------------------------------------------- */
 
 .welcome {
@@ -1416,6 +1618,44 @@ body[data-sky="clear"] .sky-fx::after {
   .sun-track::before { animation: arc-draw 1.6s ease-out 0.5s backwards; }
   .sun-arm { animation: sun-travel 2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.7s backwards; }
   .sun-track:not(.is-down) .sun-arm::before { animation: sun-glow 2.4s ease-in-out 2.7s infinite; }
+
+  /* Location map: the card rises in, the map comes into focus as if zooming
+     down onto the city, then drifts slowly closer. The pin drops in, rings
+     pulse out from it, and a radar sweep circles round. */
+  .map-card { animation: card-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.45s backwards; }
+  .map-canvas {
+    animation:
+      map-in 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s backwards,
+      map-drift 26s ease-in-out 2.3s infinite alternate;
+  }
+  .map-radar { animation: fade-in 1s ease-out 1.4s backwards; }
+  .map-radar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(transparent 0% 72%, rgba(106, 170, 240, 0.28) 100%);
+    animation: spin 5s linear infinite;
+  }
+  .map-pin { animation: pin-drop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 1.2s backwards; }
+  .map-pin::before,
+  .map-pin::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--accent-light);
+    border-radius: 50%;
+    opacity: 0;
+    animation: pin-ring 2.6s ease-out 2s infinite;
+  }
+  .map-pin::after { animation-delay: 3.3s; }
+  .map-label { animation: label-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 1.7s backwards, bob 4s ease-in-out 2.4s infinite; }
+  .map-head,
+  .map-coords,
+  .map-credit { animation: fade-in 0.6s ease-out 1s backwards; }
+  .map-open { transition: background-color 0.2s, border-color 0.2s, scale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .map-open:hover { scale: 1.05; }
+  .map-open:hover .ic { animation: nudge-out 0.6s ease-in-out; }
 }
 
 
@@ -1473,6 +1713,18 @@ body[data-sky="clear"] .sky-fx::after {
 
 @keyframes sun-travel {
   from { transform: rotate(0deg); }
+}
+
+@keyframes map-in {
+  from { opacity: 0; transform: scale(1.4); filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.45) blur(10px); }
+}
+
+@keyframes pin-drop {
+  from { opacity: 0; transform: translateY(-48px) scale(0.4); }
+}
+
+@keyframes label-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.8); }
 }
 
 @keyframes page-out {
@@ -1538,6 +1790,11 @@ body[data-sky="clear"] .sky-fx::after {
   50% { transform: scale(1.15); }
 }
 
+@keyframes pin-ring {
+  from { opacity: 0.9; transform: scale(1); }
+  to   { opacity: 0; transform: scale(6); }
+}
+
 /* Small loops */
 
 @keyframes spin {
@@ -1576,6 +1833,14 @@ body[data-sky="clear"] .sky-fx::after {
 @keyframes blink {
   0%, 90%, 100% { transform: scaleY(1); }
   94%           { transform: scaleY(0.1); }
+}
+
+@keyframes bob {
+  50% { translate: 0 -4px; }
+}
+
+@keyframes nudge-out {
+  50% { translate: 2px -2px; }
 }
 
 @keyframes needle-sway {
@@ -1665,6 +1930,10 @@ body[data-sky="clear"] .sky-fx::after {
 
 @keyframes drift {
   to { transform: translateX(12%); }
+}
+
+@keyframes map-drift {
+  to { scale: 1.08; }
 }
 
 @keyframes orb-drift {

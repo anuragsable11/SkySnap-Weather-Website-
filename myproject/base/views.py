@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, unquote
 
@@ -19,6 +20,16 @@ POPULAR_CITIES = [
 RECENT_COOKIE = 'recent_cities'
 RECENT_LIMIT = 5
 RECENT_MAX_AGE = 365 * 24 * 60 * 60  # one year, in seconds
+
+# The location map is a grid of OpenStreetMap tiles around the city, picked
+# here so the page needs no JavaScript. Zoom 11 shows a city and its outskirts.
+MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+MAP_ZOOM = 11
+TILE_SIZE = 256  # pixels
+# Half the widest and tallest the map card gets, in pixels. The grid reaches
+# this far from the city in every direction so the card is always covered.
+MAP_REACH_X = 540
+MAP_REACH_Y = 180
 
 # OpenWeather's "main" condition -> background theme. Anything not listed
 # (Mist, Haze, Fog, Dust, Smoke...) falls back to "mist".
@@ -160,6 +171,8 @@ def build_weather(payload):
     wind = payload.get('wind') or {}
     sun = payload.get('sys') or {}
     clouds = payload.get('clouds') or {}
+    coord = payload.get('coord') or {}
+    lat, lon = coord.get('lat'), coord.get('lon')
 
     # OpenWeather gives the city's offset from UTC in seconds.
     offset = timedelta(seconds=payload.get('timezone') or 0)
@@ -196,6 +209,8 @@ def build_weather(payload):
         'sunrise': local_clock(sun.get('sunrise'), offset),
         'sunset': local_clock(sun.get('sunset'), offset),
         'daylight': daylight(sun.get('sunrise'), sun.get('sunset'), now.timestamp()),
+        'coords': coordinates(lat, lon),
+        'map': map_view(lat, lon),
     }
 
 
@@ -235,6 +250,52 @@ def daylight(sunrise, sunset, now):
         'length': f'{hours}h {minutes:02d}m',
         'progress': round(min(max(progress, 0), 1), 3),
         'sun_is_up': sunrise <= now <= sunset,
+    }
+
+
+def coordinates(lat, lon):
+    """Format a position as e.g. '19.01° N, 72.85° E', or '' when unknown."""
+    if lat is None or lon is None:
+        return ''
+    return f"{abs(lat):.2f}° {'N' if lat >= 0 else 'S'}, {abs(lon):.2f}° {'E' if lon >= 0 else 'W'}"
+
+
+def map_view(lat, lon, zoom=MAP_ZOOM):
+    """Pick the map tiles around a place, or None when its position is unknown.
+
+    Tiles use the Web Mercator numbering shared by OpenStreetMap and most web
+    maps. The template lays them out in a grid of 'columns' tiles, then shifts
+    the grid by 'offset_x'/'offset_y' so the place sits in the card's centre.
+    Rows beyond the poles have no tile (None); columns wrap round the date line.
+    """
+    if lat is None or lon is None:
+        return None
+    lat = max(min(lat, 85.0), -85.0)  # Web Mercator stops short of the poles
+    tiles_across = 2 ** zoom
+
+    # The place's position in pixels on the whole-world map at this zoom.
+    x = (lon + 180) / 360 * tiles_across * TILE_SIZE
+    y = (1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * tiles_across * TILE_SIZE
+
+    first_col = math.floor((x - MAP_REACH_X) / TILE_SIZE)
+    last_col = math.floor((x + MAP_REACH_X) / TILE_SIZE)
+    first_row = math.floor((y - MAP_REACH_Y) / TILE_SIZE)
+    last_row = math.floor((y + MAP_REACH_Y) / TILE_SIZE)
+
+    tiles = []
+    for row in range(first_row, last_row + 1):
+        for col in range(first_col, last_col + 1):
+            if 0 <= row < tiles_across:
+                tiles.append(MAP_TILE_URL.format(z=zoom, x=col % tiles_across, y=row))
+            else:
+                tiles.append(None)
+
+    return {
+        'tiles': tiles,
+        'columns': last_col - first_col + 1,
+        'offset_x': round(x - first_col * TILE_SIZE),
+        'offset_y': round(y - first_row * TILE_SIZE),
+        'link': f'https://www.openstreetmap.org/?mlat={lat:.4f}&mlon={lon:.4f}#map={zoom}/{lat:.4f}/{lon:.4f}',
     }
 
 

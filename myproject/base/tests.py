@@ -5,11 +5,12 @@ import requests
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import reverse
 
-from .views import (RECENT_COOKIE, build_weather, daylight, place_option, read_recent,
-                    remember, sky_theme, weather_art)
+from .views import (RECENT_COOKIE, build_weather, daylight, map_view, place_option,
+                    read_recent, remember, sky_theme, weather_art)
 
 # A real OpenWeather response for Mumbai, trimmed to the fields the app uses.
 MUMBAI = {
+    'coord': {'lon': 72.8479, 'lat': 19.0144},
     'weather': [{'id': 721, 'main': 'Haze', 'description': 'haze', 'icon': '50d'}],
     'main': {'temp': 30.99, 'feels_like': 37.57, 'pressure': 1008, 'humidity': 70},
     'visibility': 4500,
@@ -95,6 +96,11 @@ class HomeViewTests(SimpleTestCase):
         # Numbers count up on load, with the real value kept for screen readers.
         self.assertContains(response, '<span class="count" style="--to: 31"><span class="count-num">31</span></span>', html=True)
         self.assertContains(response, 'style="--to: 1008"')  # pressure
+        # The location map, centred on the city.
+        self.assertContains(response, 'class="card map-card"')
+        self.assertContains(response, '19.01° N, 72.85° E')
+        self.assertContains(response, 'https://tile.openstreetmap.org/11/')
+        self.assertContains(response, 'https://www.openstreetmap.org/?mlat=19.0144&amp;mlon=72.8479')
         self.assertEqual(mock_get.call_args.kwargs['params']['q'], 'Mumbai')
         self.assertEqual(mock_get.call_args.kwargs['params']['appid'], 'test-key')
 
@@ -230,6 +236,49 @@ class DaylightTests(SimpleTestCase):
     def test_missing_times(self):
         self.assertIsNone(daylight(0, self.SUNSET, self.SUNRISE))
         self.assertIsNone(daylight(self.SUNRISE, None, self.SUNRISE))
+
+
+class MapViewTests(SimpleTestCase):
+
+    def tile(self, view, row, col):
+        return view['tiles'][row * view['columns'] + col]
+
+    def test_centre_tile_matches_openstreetmap(self):
+        # Central London is tile 1023/681 at zoom 11 on openstreetmap.org.
+        view = map_view(51.5074, -0.1278)
+        self.assertIn('https://tile.openstreetmap.org/11/1023/681.png', view['tiles'])
+        # The offsets point at the city inside the grid of tiles.
+        col, row = view['offset_x'] // 256, view['offset_y'] // 256
+        self.assertEqual(self.tile(view, row, col), 'https://tile.openstreetmap.org/11/1023/681.png')
+
+    def test_grid_covers_the_widest_card(self):
+        view = map_view(19.0144, 72.8479)
+        rows = len(view['tiles']) // view['columns']
+        self.assertGreaterEqual(view['offset_x'], 540)                        # left of the city
+        self.assertGreaterEqual(view['columns'] * 256 - view['offset_x'], 540)  # right
+        self.assertGreaterEqual(view['offset_y'], 180)                        # above
+        self.assertGreaterEqual(rows * 256 - view['offset_y'], 180)           # below
+
+    def test_wraps_round_the_date_line(self):
+        view = map_view(-17.7, 179.99)  # Fiji
+        self.assertTrue(any('/11/0/' in url for url in view['tiles']))
+        self.assertFalse(any('/11/2048/' in url for url in view['tiles']))
+
+    def test_no_tiles_past_the_poles(self):
+        # Only a zoomed-out map reaches past the top of the world.
+        view = map_view(89.9, 0, zoom=2)
+        self.assertIn(None, view['tiles'])
+        self.assertFalse(any('/-1.png' in url for url in view['tiles'] if url))
+
+    def test_missing_position_means_no_map(self):
+        self.assertIsNone(map_view(None, 72.8))
+        weather = build_weather({'name': 'Nowhere'})
+        self.assertIsNone(weather['map'])
+        self.assertEqual(weather['coords'], '')
+
+    def test_coordinates_in_every_hemisphere(self):
+        self.assertEqual(build_weather(MUMBAI)['coords'], '19.01° N, 72.85° E')
+        self.assertEqual(build_weather({'coord': {'lat': -33.87, 'lon': -70.65}})['coords'], '33.87° S, 70.65° W')
 
 
 class RecentSearchTests(SimpleTestCase):

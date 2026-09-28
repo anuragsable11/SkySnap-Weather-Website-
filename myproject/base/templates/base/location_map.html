@@ -1,0 +1,31 @@
+{% comment %}
+  Map of where the city is. The tiles and their offsets come from
+  base.views.map_view; the styling lives under "Location map" in style.css.
+  Tiles send the site's origin as the referrer, which OpenStreetMap asks for.
+{% endcomment %}
+<section class="card map-card" aria-labelledby="map-title">
+  <div class="map-canvas" aria-hidden="true">
+    <div class="map-tiles" style="--columns: {{ map.columns }}; left: calc(50% - {{ map.offset_x }}px); top: calc(50% - {{ map.offset_y }}px)">
+      {% for url in map.tiles %}{% if url %}<img src="{{ url }}" alt="" width="256" height="256" loading="lazy" decoding="async" referrerpolicy="strict-origin-when-cross-origin">{% else %}<span></span>{% endif %}{% endfor %}
+    </div>
+  </div>
+  <div class="map-tint" aria-hidden="true"></div>
+  <div class="map-radar" aria-hidden="true"></div>
+
+  <div class="map-pin" aria-hidden="true">
+    <span class="map-label">{{ weather.city }}{% if weather.temp is not None %} <strong>{{ weather.temp }}°</strong>{% endif %}</span>
+  </div>
+
+  <header class="map-head">
+    <h2 class="map-title" id="map-title">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Location
+    </h2>
+    <a class="map-open" href="{{ map.link }}" target="_blank" rel="noopener">
+      Open map
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+    </a>
+  </header>
+
+  <p class="map-coords">{{ weather.coords }}</p>
+  <p class="map-credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
+</section>
