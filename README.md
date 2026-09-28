@@ -7,11 +7,13 @@ A clean, minimal weather app built with Django. Search any city in the world to 
 ## 🚀 Features
 
 * 🔍 Search the weather for any city (add a country code to be specific, e.g. `Paris,FR`)
+* 📋 Clicking the search bar opens a dropdown of your recent searches (saved in a cookie, no account needed) and popular cities
 * 🌡️ Temperature and "feels like" in °C
 * 💧 Humidity, wind speed and direction, pressure and visibility
 * 🌅 Sunrise and sunset in the city's own timezone
 * 🕒 The city's local date and time
 * 🎨 Glass-style UI whose background changes with the weather (clear, night, clouds, rain, storm, snow, mist)
+* ✨ Lots of pure-CSS animation: numbers count up, the compass needle swings to the wind, the sun climbs its arc, shooting stars cross the night sky, and searches glide smoothly into their results. All of it stops for people who turn on reduced motion
 * 📱 Responsive down to small phones, with no JavaScript
 * ⚠️ Clear messages for unknown cities, missing or rejected API keys, and network problems
 

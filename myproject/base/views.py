@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote, unquote
 
 import requests
 from django.conf import settings
@@ -7,7 +8,17 @@ from django.shortcuts import render
 OPENWEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
 REQUEST_TIMEOUT = 10  # seconds
 
-POPULAR_CITIES = ['London', 'New York', 'Tokyo', 'Mumbai', 'Paris', 'Sydney']
+# Offered in the search dropdown; the first six are also shown as chips.
+# Searching "Name,CC" makes OpenWeather pick the right country's city.
+POPULAR_CITIES = [
+    'London,GB', 'New York,US', 'Tokyo,JP', 'Mumbai,IN', 'Paris,FR', 'Sydney,AU',
+    'Dubai,AE', 'Singapore,SG', 'Delhi,IN', 'Toronto,CA', 'Cape Town,ZA', 'Rio de Janeiro,BR',
+]
+
+# The last few cities found are kept in a cookie for the search dropdown.
+RECENT_COOKIE = 'recent_cities'
+RECENT_LIMIT = 5
+RECENT_MAX_AGE = 365 * 24 * 60 * 60  # one year, in seconds
 
 # OpenWeather's "main" condition -> background theme. Anything not listed
 # (Mist, Haze, Fog, Dust, Smoke...) falls back to "mist".
@@ -46,14 +57,62 @@ ART_BY_CONDITION = {
 def home(request):
     """Show the search form, plus the weather for the city that was searched."""
     city = request.GET.get('city_name', '').strip()
+    recent = read_recent(request)
     context = {
         'city': city,
-        'popular_cities': POPULAR_CITIES,
+        'popular_cities': [place_option(query) for query in POPULAR_CITIES],
         'api_key_missing': not settings.OPENWEATHER_API_KEY,
     }
+    place = ''
     if city:
         context['weather'], context['error'] = fetch_weather(city)
-    return render(request, 'base/home.html', context)
+        if context['weather']:
+            place = place_query(context['weather'])
+    if place:
+        recent = remember(recent, place)
+        # The dropdown skips the city already on screen.
+        context['recent_cities'] = [place_option(query) for query in recent[1:]]
+    else:
+        context['recent_cities'] = [place_option(query) for query in recent]
+
+    response = render(request, 'base/home.html', context)
+    if place:
+        response.set_cookie(
+            RECENT_COOKIE, quote('|'.join(recent)), max_age=RECENT_MAX_AGE,
+            secure=request.is_secure(), httponly=True, samesite='Lax',
+        )
+    return response
+
+
+def read_recent(request):
+    """The recently found cities saved in the visitor's cookie, newest first."""
+    saved = unquote(request.COOKIES.get(RECENT_COOKIE, ''))
+    queries = [query.strip() for query in saved.split('|')]
+    return [query for query in queries if 0 < len(query) <= 100][:RECENT_LIMIT]
+
+
+def remember(recent, query):
+    """Put a city at the front of the recent list, without repeating it."""
+    others = [old for old in recent if old.lower() != query.lower()]
+    return [query, *others][:RECENT_LIMIT]
+
+
+def place_query(weather):
+    """The search text that finds this exact place again, e.g. 'Mumbai,IN'.
+
+    Empty when the response had no city name, so there is nothing to save.
+    """
+    if weather['city'] and weather['country']:
+        return f"{weather['city']},{weather['country']}"
+    return weather['city']
+
+
+def place_option(query):
+    """Split a search such as 'New York,US' into what the dropdown shows."""
+    name, comma, country = query.rpartition(',')
+    if not comma:
+        name, country = query, ''
+    return {'query': query, 'name': name.strip(), 'country': country.strip().upper()}
 
 
 def fetch_weather(city):

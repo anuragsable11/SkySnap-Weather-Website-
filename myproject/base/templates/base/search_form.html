@@ -1,7 +1,10 @@
 <form class="search" action="{% url 'home' %}" method="get" role="search">
   <label class="sr-only" for="city">City name</label>
   <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-  <input id="city" type="text" name="city_name" value="{{ city }}" placeholder="Search any city…"
-         maxlength="100" enterkeyhint="search" spellcheck="false" autocomplete="off" required{% if not weather %} autofocus{% endif %}>
+  {# Left empty after a successful search so focusing it opens the city dropdown; kept after an error so a typo can be fixed. #}
+  <input id="city" type="text" name="city_name" value="{% if not weather %}{{ city }}{% endif %}"
+         placeholder="{% if weather %}Search another city…{% else %}Search any city…{% endif %}"
+         maxlength="100" enterkeyhint="search" spellcheck="false" autocomplete="off" required{% if error %} autofocus{% endif %}>
   <button type="submit">Snap it</button>
+  {% include "base/suggestions.html" %}
 </form>

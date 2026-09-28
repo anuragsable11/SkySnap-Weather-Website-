@@ -1,0 +1,34 @@
+{% comment %}
+  The dropdown under the search bar. It sits inside the search form so the CSS
+  can open it while the search box is focused and empty (see "City
+  suggestions" in style.css).
+{% endcomment %}
+<nav class="suggest" aria-label="City suggestions">
+  {% if recent_cities %}
+    <p class="suggest-label">Recent searches</p>
+    <ul class="suggest-list">
+      {% for place in recent_cities %}
+        <li>
+          <a class="suggest-item" style="--i: {{ forloop.counter0 }}" href="{% url 'home' %}?city_name={{ place.query|urlencode }}">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span class="suggest-name">{{ place.name }}</span>
+            {% if place.country %}<span class="suggest-cc">{{ place.country }}</span>{% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <p class="suggest-label">Popular cities</p>
+  <ul class="suggest-list">
+    {% for place in popular_cities %}
+      <li>
+        <a class="suggest-item" style="--i: {{ forloop.counter0 }}" href="{% url 'home' %}?city_name={{ place.query|urlencode }}">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <span class="suggest-name">{{ place.name }}</span>
+          <span class="suggest-cc">{{ place.country }}</span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>

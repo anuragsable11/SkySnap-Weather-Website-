@@ -32,7 +32,7 @@
               {% if weather.country %}<span class="country">{{ weather.country }}</span>{% endif %}
             </h1>
             <p class="when">
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path class="clock-hand" d="M12 6v6l4 2"/></svg>
               {{ weather.local_date }} · {{ weather.local_time }} local time
             </p>
           </header>
@@ -41,7 +41,7 @@
 
           <div class="hero-now">
             <p class="temp">
-              <span class="temp-value">{{ weather.temp|default_if_none:"–" }}</span><span class="temp-unit">°C</span>
+              <span class="temp-value">{% if weather.temp is not None %}{% include "base/count.html" with value=weather.temp %}{% else %}–{% endif %}</span><span class="temp-unit">°C</span>
             </p>
             <p class="condition">{{ weather.description }}</p>
             {% if weather.feels_like is not None %}
@@ -53,9 +53,9 @@
         <dl class="details">
 
           <div class="tile tile-wind">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>Wind</dt>
+            <dt><svg class="ic ic-wind" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>Wind</dt>
             <dd>
-              <span class="tile-value">{% if weather.wind_speed is not None %}{{ weather.wind_speed }}<small>km/h</small>{% else %}—{% endif %}</span>
+              <span class="tile-value">{% if weather.wind_speed is not None %}{% include "base/count.html" with value=weather.wind_speed %}<small>km/h</small>{% else %}—{% endif %}</span>
               {% if weather.wind_direction %}<span class="tile-note">from {{ weather.wind_direction }}</span>{% endif %}
               {% if weather.wind_gust is not None %}<span class="tile-note">Gusts {{ weather.wind_gust }} km/h</span>{% endif %}
               <span class="compass-wrap" aria-hidden="true">
@@ -74,34 +74,34 @@
           </div>
 
           <div class="tile">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Humidity</dt>
+            <dt><svg class="ic ic-drop" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Humidity</dt>
             <dd>
-              <span class="tile-value">{% if weather.humidity is not None %}{{ weather.humidity }}<small>%</small>{% else %}—{% endif %}</span>
+              <span class="tile-value">{% if weather.humidity is not None %}{% include "base/count.html" with value=weather.humidity %}<small>%</small>{% else %}—{% endif %}</span>
               {% if weather.humidity is not None %}<span class="meter" aria-hidden="true"><span style="--pct: {{ weather.humidity|stringformat:'d' }}%"></span></span>{% endif %}
             </dd>
           </div>
 
           <div class="tile">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>Cloud cover</dt>
+            <dt><svg class="ic ic-cloud" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>Cloud cover</dt>
             <dd>
-              <span class="tile-value">{% if weather.cloud_cover is not None %}{{ weather.cloud_cover }}<small>%</small>{% else %}—{% endif %}</span>
+              <span class="tile-value">{% if weather.cloud_cover is not None %}{% include "base/count.html" with value=weather.cloud_cover %}<small>%</small>{% else %}—{% endif %}</span>
               {% if weather.cloud_cover is not None %}<span class="meter meter-cloud" aria-hidden="true"><span style="--pct: {{ weather.cloud_cover|stringformat:'d' }}%"></span></span>{% endif %}
             </dd>
           </div>
 
           <div class="tile">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>Pressure</dt>
-            <dd><span class="tile-value">{% if weather.pressure is not None %}{{ weather.pressure }}<small>hPa</small>{% else %}—{% endif %}</span></dd>
+            <dt><svg class="ic ic-gauge" viewBox="0 0 24 24" aria-hidden="true"><path class="needle" d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>Pressure</dt>
+            <dd><span class="tile-value">{% if weather.pressure is not None %}{% include "base/count.html" with value=weather.pressure %}<small>hPa</small>{% else %}—{% endif %}</span></dd>
           </div>
 
           <div class="tile">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Visibility</dt>
+            <dt><svg class="ic ic-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Visibility</dt>
             <dd><span class="tile-value">{% if weather.visibility is not None %}{{ weather.visibility|floatformat:"-1" }}<small>km</small>{% else %}—{% endif %}</span></dd>
           </div>
 
           <div class="tile tile-sun">
             <dt>
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>Sun
+              <svg class="ic ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>Sun
               {% if weather.daylight %}<span class="tile-aside">{{ weather.daylight.length }} of daylight</span>{% endif %}
             </dt>
             <dd>
@@ -130,8 +130,8 @@
           {% if not api_key_missing %}
             <p class="chips-label">Or try one of these:</p>
             <nav class="chips" aria-label="Popular cities">
-              {% for name in popular_cities %}
-                <a class="chip" href="{% url 'home' %}?city_name={{ name|urlencode }}">{{ name }}</a>
+              {% for place in popular_cities|slice:":6" %}
+                <a class="chip" style="--i: {{ forloop.counter0 }}" href="{% url 'home' %}?city_name={{ place.query|urlencode }}">{{ place.name }}</a>
               {% endfor %}
             </nav>
           {% endif %}
@@ -142,7 +142,12 @@
 
       <section class="welcome">
         <div class="welcome-art">{% include "base/weather_art.html" with art="partly-day" %}</div>
-        <h1>What's the sky doing?</h1>
+        <h1>
+          <span class="word" style="--i: 0">What's</span>
+          <span class="word" style="--i: 1">the</span>
+          <span class="word word-sky" style="--i: 2">sky</span>
+          <span class="word" style="--i: 3">doing?</span>
+        </h1>
         <p class="welcome-lead">Search any city in the world for live temperature, wind, humidity and local time.</p>
 
         {% include "base/search_form.html" %}
@@ -155,8 +160,8 @@
         {% else %}
           <p class="chips-label">Try one of these</p>
           <nav class="chips" aria-label="Popular cities">
-            {% for name in popular_cities %}
-              <a class="chip" href="{% url 'home' %}?city_name={{ name|urlencode }}">{{ name }}</a>
+            {% for place in popular_cities|slice:":6" %}
+              <a class="chip" style="--i: {{ forloop.counter0 }}" href="{% url 'home' %}?city_name={{ place.query|urlencode }}">{{ place.name }}</a>
             {% endfor %}
           </nav>
         {% endif %}

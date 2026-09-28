@@ -41,10 +41,10 @@
       <rect x="28" y="78" width="80" height="24" rx="12"/>
     </g>
     <g id="art-sun-shape">
-      <circle cx="64" cy="64" r="46" fill="url(#art-sun-glow)"/>
+      <circle class="art-glow" cx="64" cy="64" r="46" fill="url(#art-sun-glow)"/>
       <path class="art-rays" d="M100 64h12M89.5 89.5l8.5 8.5M64 100v12M38.5 89.5 30 98M28 64H16M38.5 38.5 30 30M64 28V16M89.5 38.5 98 30"
             stroke="#ffc93c" stroke-width="6" stroke-linecap="round"/>
-      <circle cx="64" cy="64" r="26" fill="url(#art-sun)"/>
+      <circle class="art-core" cx="64" cy="64" r="26" fill="url(#art-sun)"/>
     </g>
     <path id="art-sparkle" d="M0-6 1.6-1.6 6 0 1.6 1.6 0 6-1.6 1.6-6 0-1.6-1.6z" fill="#fff6d5"/>
   </defs>
@@ -53,7 +53,7 @@
     <use href="#art-sun-shape"/>
 
   {% elif art == 'clear-night' %}
-    <circle cx="62" cy="64" r="30" fill="url(#art-moon)" mask="url(#art-crescent)"/>
+    <g class="art-moon"><circle cx="62" cy="64" r="30" fill="url(#art-moon)" mask="url(#art-crescent)"/></g>
     <use class="art-star" href="#art-sparkle" x="98" y="80"/>
     <use class="art-star" href="#art-sparkle" x="30" y="30" style="--delay: -1.2s"/>
     <use class="art-star" href="#art-sparkle" x="104" y="36" style="--delay: -2.1s"/>
@@ -64,13 +64,13 @@
 
   {% elif art == 'partly-night' %}
     <g transform="translate(8 2) scale(0.62)">
-      <circle cx="62" cy="64" r="30" fill="url(#art-moon)" mask="url(#art-crescent)"/>
+      <g class="art-moon"><circle cx="62" cy="64" r="30" fill="url(#art-moon)" mask="url(#art-crescent)"/></g>
     </g>
     <use class="art-star" href="#art-sparkle" x="96" y="26" style="--delay: -0.8s"/>
     <g class="art-float"><use href="#art-cloud-shape" fill="url(#art-cloud)" transform="translate(4 8)"/></g>
 
   {% elif art == 'cloudy' %}
-    <g class="art-float art-float-slow"><use href="#art-cloud-shape" fill="url(#art-cloud-grey)" transform="translate(32 -8) scale(0.7)"/></g>
+    <g class="art-drift"><g class="art-float art-float-slow"><use href="#art-cloud-shape" fill="url(#art-cloud-grey)" transform="translate(32 -8) scale(0.7)"/></g></g>
     <g class="art-float"><use href="#art-cloud-shape" fill="url(#art-cloud)" transform="translate(-6 8)"/></g>
 
   {% elif art == 'rain' %}
@@ -88,7 +88,7 @@
       <path class="art-drop" d="M94 100l-4 10"/>
     </g>
     <path class="art-bolt" d="M66 78 52 102h12l-6 22 22-30H67l7-16z" fill="#ffd84d"/>
-    <use href="#art-cloud-shape" fill="url(#art-cloud-dark)" transform="translate(-4 -14)"/>
+    <g class="art-rumble"><use href="#art-cloud-shape" fill="url(#art-cloud-dark)" transform="translate(-4 -14)"/></g>
 
   {% elif art == 'snow' %}
     <g fill="#ffffff">
