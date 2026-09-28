@@ -15,13 +15,17 @@
   --text-soft: #c3d7f2;
   --text-muted: #8fb0dc;
   --accent: #6aaaf0;
+  --accent-light: #a8d4ff;
+  --sun: #ffd34d;
 
   --button: #2468c4;
   --button-hover: #2a70cf;
 
-  --glass: rgba(6, 16, 40, 0.55);
+  --glass: rgba(6, 16, 40, 0.50);
+  --glass-strong: rgba(6, 16, 40, 0.62);
   --tile: rgba(255, 255, 255, 0.05);
   --line: rgba(160, 200, 255, 0.16);
+  --highlight: rgba(255, 255, 255, 0.07);
 
   --danger: #ffb4b4;
   --danger-line: rgba(255, 130, 130, 0.35);
@@ -29,8 +33,8 @@
   --warn-bg: rgba(255, 196, 80, 0.10);
   --warn-line: rgba(255, 196, 80, 0.32);
 
-  --radius-lg: 22px;
-  --radius-md: 14px;
+  --radius-lg: 26px;
+  --radius-md: 18px;
   --radius-pill: 999px;
 
   --font-display: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -117,28 +121,139 @@ code {
 }
 
 
+/* ---- Sky effects ----------------------------------------------------------
+   One fixed layer behind the page that matches the weather: stars at night,
+   rain, snow, or drifting cloud. Only the movement is switched off for people
+   who prefer reduced motion (see "Motion" at the end).
+   -------------------------------------------------------------------------- */
+
+.sky-fx {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sky-fx::before,
+.sky-fx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+/* Stars: the welcome page and clear nights. Each layer repeats one star on a
+   different, non-square tile, so together they don't line up into a grid. */
+body[data-sky="default"] .sky-fx::before,
+body[data-sky="night"] .sky-fx::before,
+body[data-sky="night"] .sky-fx::after {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.85) 0 1px, transparent 1.6px) 0 0 / 173px 211px,
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.60) 0 1px, transparent 1.6px) 0 0 / 229px 157px,
+    radial-gradient(circle at 40% 80%, rgba(210, 225, 255, 0.80) 0 1.2px, transparent 2px) 0 0 / 293px 331px,
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.55) 0 0.8px, transparent 1.4px) 0 0 / 139px 263px,
+    radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.80) 0 1.4px, transparent 2.2px) 0 0 / 419px 379px;
+  -webkit-mask-image: linear-gradient(#000 0%, #000 45%, transparent 85%);
+  mask-image: linear-gradient(#000 0%, #000 45%, transparent 85%);
+}
+
+body[data-sky="default"] .sky-fx::before { opacity: 0.4; }
+
+body[data-sky="night"] .sky-fx::after {
+  background-position: 71px 43px, 31px 113px, 151px 23px, 53px 61px, 199px 167px;
+  opacity: 0.5;
+}
+
+/* Rain: thin streaks on a tall layer that slides down by one full tile. */
+body[data-sky="rain"] .sky-fx::before,
+body[data-sky="storm"] .sky-fx::before {
+  inset: -480px -30% -240px;
+  background:
+    radial-gradient(1px 16px at 30% 40%, rgba(190, 215, 255, 0.50), transparent) 0 0 / 60px 120px,
+    radial-gradient(1px 12px at 70% 20%, rgba(190, 215, 255, 0.35), transparent) 0 0 / 90px 80px,
+    radial-gradient(1px 22px at 50% 70%, rgba(190, 215, 255, 0.40), transparent) 0 0 / 130px 240px;
+  transform: rotate(12deg);
+}
+
+/* Snow: soft flakes on two layers that fall at different speeds. Tile heights
+   all divide 360px, the distance one loop of snow-fall moves. */
+body[data-sky="snow"] .sky-fx::before,
+body[data-sky="snow"] .sky-fx::after {
+  inset: -360px 0 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.75) 0 2px, transparent 3px) 0 0 / 157px 120px,
+    radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.50) 0 1.5px, transparent 2.5px) 0 0 / 211px 180px,
+    radial-gradient(circle at 45% 55%, rgba(255, 255, 255, 0.80) 0 2.5px, transparent 3.5px) 0 0 / 263px 360px,
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.60) 0 1.8px, transparent 2.8px) 0 0 / 331px 90px;
+}
+
+body[data-sky="snow"] .sky-fx::after {
+  background-position: 71px 23px, 97px 61px, 13px 139px, 181px 47px;
+  opacity: 0.55;
+}
+
+/* Cloud and mist: big, faint banks of cloud drifting sideways. */
+body[data-sky="clouds"] .sky-fx::before,
+body[data-sky="mist"] .sky-fx::before {
+  inset: 0 -25%;
+  background:
+    radial-gradient(ellipse 28% 16% at 18% 18%, rgba(225, 235, 250, 0.10), transparent 70%),
+    radial-gradient(ellipse 24% 12% at 55% 32%, rgba(225, 235, 250, 0.08), transparent 70%),
+    radial-gradient(ellipse 32% 18% at 85% 10%, rgba(225, 235, 250, 0.10), transparent 70%),
+    radial-gradient(ellipse 26% 14% at 35% 70%, rgba(225, 235, 250, 0.05), transparent 70%);
+}
+
+body[data-sky="mist"] .sky-fx::after {
+  top: auto;
+  height: 55%;
+  background: linear-gradient(transparent, rgba(215, 222, 235, 0.14));
+}
+
+/* Clear day: a warm, slowly breathing sun glow in the corner. */
+body[data-sky="clear"] .sky-fx::before {
+  background: radial-gradient(circle at 88% 4%, rgba(255, 225, 140, 0.30), transparent 32%);
+}
+
+
 /* ---- Layout -------------------------------------------------------------- */
 
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   width: 100%;
-  max-width: 520px;
+  max-width: 1080px;
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: clamp(28px, 7vh, 64px) 16px 28px;
+  padding: clamp(20px, 4vh, 40px) 16px 24px;
 }
+
+.page-welcome { max-width: 640px; }
 
 .content { flex: 1; }
 
 
-/* ---- Brand --------------------------------------------------------------- */
+/* ---- Top bar ------------------------------------------------------------- */
 
-.brand {
+.topbar {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.topbar .search { width: 100%; }
+
+@media (min-width: 860px) {
+  .topbar {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .page-welcome .topbar { justify-content: center; }
+
+  .topbar .search { width: min(440px, 50%); }
 }
 
 .brand-link {
@@ -151,14 +266,15 @@ code {
 }
 
 .brand-logo {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.30));
 }
 
 .brand-name {
   display: block;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 25px;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: 0.3px;
@@ -181,9 +297,10 @@ code {
   align-items: center;
   gap: 8px;
   padding: 6px 6px 6px 18px;
-  background: var(--glass);
+  background: var(--glass-strong);
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 0 var(--highlight), 0 10px 30px rgba(0, 0, 0, 0.18);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -191,7 +308,7 @@ code {
 
 .search:focus-within {
   border-color: rgba(106, 170, 240, 0.60);
-  box-shadow: 0 0 0 4px rgba(106, 170, 240, 0.16);
+  box-shadow: inset 0 1px 0 var(--highlight), 0 0 0 4px rgba(106, 170, 240, 0.16);
 }
 
 .search > .ic {
@@ -223,14 +340,15 @@ code {
   font-size: 15px;
   font-weight: 600;
   color: #fff;
-  background: var(--button);
+  background: linear-gradient(180deg, #3a82e0, var(--button));
   border: 0;
   border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 16px rgba(36, 104, 196, 0.35);
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: filter 0.2s, transform 0.1s;
 }
 
-.search button:hover { background: var(--button-hover); }
+.search button:hover { filter: brightness(1.08); }
 .search button:active { transform: scale(0.97); }
 
 
@@ -241,7 +359,7 @@ code {
   background: var(--glass);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 0 var(--highlight), 0 24px 60px rgba(0, 0, 0, 0.25);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
@@ -251,7 +369,57 @@ code {
 }
 
 
-/* ---- Weather card -------------------------------------------------------- */
+/* ---- Weather report ------------------------------------------------------
+   Phones: one column. Wider screens: the hero card on the left, the detail
+   tiles on the right, both the same height.
+   -------------------------------------------------------------------------- */
+
+.report {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 860px) {
+  .report {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+
+/* ---- Hero card ----------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head head"
+    "now  art";
+  align-content: space-between;
+  align-items: end;
+  gap: 12px 8px;
+}
+
+/* Wide screens: the card is as tall as the tiles beside it, so the
+   illustration moves into the middle and grows to fill that space. */
+@media (min-width: 860px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "art"
+      "now";
+  }
+
+  .hero .hero-art {
+    justify-self: center;
+    align-self: center;
+    width: min(270px, 70%);
+    margin: 0;
+  }
+}
+
+.hero-head { grid-area: head; }
 
 .place {
   display: flex;
@@ -259,9 +427,9 @@ code {
   align-items: center;
   gap: 10px;
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: clamp(28px, 6vw, 36px);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .place-name {
@@ -270,7 +438,7 @@ code {
 }
 
 .country {
-  padding: 3px 9px;
+  padding: 3px 10px;
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 700;
@@ -291,128 +459,343 @@ code {
 
 .when .ic { margin-top: 3px; }
 
-.now {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 18px;
+.hero-art {
+  grid-area: art;
+  position: relative;
+  width: clamp(116px, 34vw, 220px);
+  margin: 0 -10px -6px 0;
 }
+
+/* Soft glow in the sky's colour behind the illustration. "screen" lightens
+   what is underneath; a plain overlay of warm glow on blue turns grey. */
+.hero-art::before,
+.welcome-art::before {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow), transparent 70%);
+  mix-blend-mode: screen;
+}
+
+.hero-now { grid-area: now; }
 
 .temp {
   display: flex;
   align-items: flex-start;
   font-family: var(--font-display);
-  line-height: 0.9;
+  line-height: 0.85;
 }
 
 .temp-value {
-  font-size: clamp(76px, 22vw, 108px);
+  font-size: clamp(84px, 21vw, 148px);
   font-weight: 300;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
 }
 
 .temp-unit {
-  margin: 0.35em 0 0 0.15em;
-  font-size: clamp(22px, 6vw, 30px);
+  margin: 0.3em 0 0 0.12em;
+  font-size: clamp(22px, 5vw, 32px);
   color: var(--text-soft);
 }
 
-.now-icon {
-  width: clamp(96px, 30vw, 128px);
-  height: auto;
-  margin: -12px -14px -12px 0;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.30));
-}
-
 .condition {
-  margin-top: 10px;
+  margin-top: 14px;
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: clamp(20px, 4.5vw, 24px);
   font-weight: 600;
+  line-height: 1.25;
 }
 
 .feels {
+  margin-top: 2px;
   font-size: 15px;
   color: var(--text-soft);
 }
 
-.stats {
+
+/* ---- Weather art --------------------------------------------------------- */
+
+.art {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.28));
+}
+
+
+/* ---- Detail tiles -------------------------------------------------------- */
+
+.details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--line);
+  gap: 12px;
 }
 
-@media (min-width: 560px) {
-  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 860px) {
+  .details { gap: 14px; }
 }
 
-.stat {
-  padding: 14px;
-  background: var(--tile);
+.tile {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--glass);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 var(--highlight);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
 }
 
-.stat dt {
+@media (min-width: 480px) {
+  .tile { padding: 18px 20px; }
+}
+
+.tile-wind { grid-row: span 2; }
+.tile-sun { grid-column: 1 / -1; }
+
+.tile dt {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
-.stat dd {
-  margin-top: 6px;
+.tile dd {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.tile-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.tile-value small {
+  margin-left: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-soft);
+}
+
+.tile-note {
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.tile-aside {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-soft);
+}
+
+/* Bar under humidity and cloud cover. --pct is set in the template. */
+.meter {
+  display: block;
+  height: 6px;
+  margin-top: auto;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: var(--radius-pill);
+}
+
+.tile-value:has(+ .meter) { margin-bottom: 16px; }
+
+.meter > span {
+  display: block;
+  width: var(--pct);
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: inherit;
+}
+
+.meter-cloud > span {
+  background: linear-gradient(90deg, #8a9bb8, #e3eaf5);
+}
+
+/* Wind compass. The arrow turns to where the wind is blowing. */
+.compass-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.compass {
+  position: relative;
+  width: clamp(104px, 30vw, 132px);
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.07), transparent 70%);
+}
+
+/* Tick marks every 30°, cut down to a thin ring by the mask. */
+.compass::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from -1deg, var(--line) 0 2deg, transparent 2deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 84%, #000 85%);
+  mask: radial-gradient(circle, transparent 84%, #000 85%);
+}
+
+.compass-point {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.compass-n { top: 14px; left: 50%; transform: translateX(-50%); color: var(--text); }
+.compass-s { bottom: 14px; left: 50%; transform: translateX(-50%); }
+.compass-e { right: 14px; top: 50%; transform: translateY(-50%); }
+.compass-w { left: 14px; top: 50%; transform: translateY(-50%); }
+
+.compass-arrow {
+  position: absolute;
+  inset: 26%;
+  width: 48%;
+  height: 48%;
+  fill: var(--accent-light);
+  filter: drop-shadow(0 2px 6px rgba(106, 170, 240, 0.55));
+  transform: rotate(calc(var(--deg) + 180deg));
+}
+
+/* Sun arc: sunrise on the left, sunset on the right. The arm turns from 0°
+   to 180° as --p goes from 0 to 1, carrying the sun along the arc. */
+.sun-track {
+  position: relative;
+  display: block;
+  width: min(100% - 24px, 300px);
+  aspect-ratio: 2 / 1;
+  margin: 22px auto 0;
+}
+
+.sun-track::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px dashed rgba(255, 211, 77, 0.40);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+
+.sun-track::after {
+  content: "";
+  position: absolute;
+  right: -12px;
+  bottom: 0;
+  left: -12px;
+  height: 1px;
+  background: var(--line);
+}
+
+.sun-arm {
+  position: absolute;
+  bottom: 0;
+  left: 1px;
+  width: calc(50% - 1px);
+  height: 0;
+  transform-origin: 100% 50%;
+  transform: rotate(calc(var(--p) * 180deg));
+}
+
+.sun-arm::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff4b8, var(--sun) 55%, #ffa92e);
+  box-shadow: 0 0 0 6px rgba(255, 211, 77, 0.18), 0 0 26px rgba(255, 200, 80, 0.65);
+}
+
+.sun-track.is-down .sun-arm::before {
+  background: #7d8aa5;
+  box-shadow: none;
+}
+
+.sun-times {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 600;
   line-height: 1.2;
 }
 
-.stat dd small {
-  margin-left: 3px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-soft);
-}
+.sun-times > span:last-child { text-align: right; }
 
-.stat-note {
+.sun-times small {
   display: block;
-  margin-top: 2px;
+  margin-bottom: 2px;
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 
-/* ---- Welcome card -------------------------------------------------------- */
+/* ---- Welcome ------------------------------------------------------------- */
 
-.welcome { text-align: center; }
+.welcome {
+  padding-top: clamp(0px, 3vh, 32px);
+  text-align: center;
+}
 
 .welcome-art {
-  display: block;
-  width: 88px;
-  height: 88px;
-  margin: 0 auto 16px;
+  position: relative;
+  width: clamp(132px, 38vw, 176px);
+  margin: 0 auto 10px;
 }
 
 .welcome h1 {
   font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: clamp(34px, 8vw, 50px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
 
-.welcome > p {
-  margin-top: 8px;
+.welcome-lead {
+  max-width: 28em;
+  margin: 14px auto 0;
+  font-size: 17px;
   color: var(--text-soft);
 }
+
+.welcome .search {
+  margin-top: 30px;
+  padding: 8px 8px 8px 20px;
+  text-align: left;
+}
+
+.welcome .search button { padding: 13px 26px; }
 
 .welcome > .setup {
   margin-top: 22px;
@@ -434,6 +817,8 @@ code {
   display: flex;
   align-items: flex-start;
   gap: 14px;
+  max-width: 640px;
+  margin: 0 auto;
   border-color: var(--danger-line);
 }
 
@@ -461,11 +846,12 @@ code {
 
 /* ---- City chips ---------------------------------------------------------- */
 
-.welcome > .chips-label,
 .chips-label {
-  margin-top: 22px;
-  font-size: 13px;
-  font-weight: 600;
+  margin-top: 26px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -474,11 +860,11 @@ code {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .chip {
-  padding: 7px 14px;
+  padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-soft);
@@ -486,13 +872,14 @@ code {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
 }
 
 .chip:hover {
   color: var(--text);
   background: rgba(106, 170, 240, 0.18);
   border-color: rgba(106, 170, 240, 0.45);
+  transform: translateY(-1px);
 }
 
 
@@ -515,14 +902,95 @@ code {
 /* ---- Motion -------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: no-preference) {
-  .card { animation: rise 0.45s ease-out both; }
-  .now-icon { animation: drift 6s ease-in-out infinite; }
+  /* Cards and tiles rise in one after another. */
+  .card,
+  .welcome,
+  .tile { animation: rise 0.5s ease-out both; }
+  .tile:nth-child(1) { animation-delay: 0.06s; }
+  .tile:nth-child(2) { animation-delay: 0.10s; }
+  .tile:nth-child(3) { animation-delay: 0.14s; }
+  .tile:nth-child(4) { animation-delay: 0.18s; }
+  .tile:nth-child(5) { animation-delay: 0.22s; }
+  .tile:nth-child(6) { animation-delay: 0.26s; }
+
+  /* Weather art */
+  .art-rays { transform-box: fill-box; transform-origin: center; animation: spin 30s linear infinite; }
+  .art-float { animation: float 6s ease-in-out infinite; }
+  .art-float-slow { animation-duration: 9s; animation-delay: -3s; }
+  .art-drop { animation: drop 1s linear infinite var(--delay, 0s); }
+  .art-flake { animation: flake 3s linear infinite var(--delay, 0s); }
+  .art-bolt { animation: bolt 4s linear infinite; }
+  .art-star { transform-box: fill-box; transform-origin: center; animation: twinkle 3s ease-in-out infinite var(--delay, 0s); }
+  .art-haze { animation: haze 5s ease-in-out infinite alternate var(--delay, 0s); }
+
+  /* Sky effects */
+  body[data-sky="night"] .sky-fx::after { animation: fade 4s ease-in-out infinite alternate; }
+  body[data-sky="rain"] .sky-fx::before,
+  body[data-sky="storm"] .sky-fx::before { animation: rain-fall 0.7s linear infinite; }
+  body[data-sky="storm"] .sky-fx::after { animation: lightning 9s linear infinite; }
+  body[data-sky="snow"] .sky-fx::before { animation: snow-fall 16s linear infinite; }
+  body[data-sky="snow"] .sky-fx::after { animation: snow-fall 24s linear infinite; }
+  body[data-sky="clouds"] .sky-fx::before,
+  body[data-sky="mist"] .sky-fx::before { animation: drift 50s ease-in-out infinite alternate; }
+  body[data-sky="clear"] .sky-fx::before { animation: fade 6s ease-in-out infinite alternate; }
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes drop {
+  0%   { opacity: 0; transform: translate(1px, -6px); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-4px, 12px); }
+}
+
+@keyframes flake {
+  0%   { opacity: 0; transform: translate(0, -8px); }
+  25%  { opacity: 1; }
+  50%  { transform: translate(3px, 2px); }
+  100% { opacity: 0; transform: translate(-2px, 14px); }
+}
+
+@keyframes bolt {
+  0%, 84%, 90%, 100% { opacity: 1; }
+  86%, 92% { opacity: 0.25; }
+}
+
+@keyframes twinkle {
+  50% { opacity: 0.45; transform: scale(0.6); }
+}
+
+@keyframes haze {
+  to { transform: translateX(8px); }
+}
+
+@keyframes fade {
+  to { opacity: 0.15; }
+}
+
+@keyframes rain-fall {
+  to { transform: rotate(12deg) translateY(240px); }
+}
+
+@keyframes snow-fall {
+  to { transform: translateY(360px); }
 }
 
 @keyframes drift {
-  50% { transform: translateY(-6px); }
+  to { transform: translateX(12%); }
+}
+
+/* One soft, slow flicker per cycle; kept faint on purpose. */
+@keyframes lightning {
+  0%, 91%, 95%, 100% { background: transparent; }
+  92%, 94% { background: rgba(205, 195, 255, 0.10); }
 }

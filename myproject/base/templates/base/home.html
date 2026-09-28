@@ -6,84 +6,119 @@
 {% block sky %}{% if weather %}{{ weather.sky }}{% else %}default{% endif %}{% endblock %}
 
 {% block content %}
-<div class="page">
+<div class="page{% if not weather and not error %} page-welcome{% endif %}">
 
-  <header class="brand">
+  <header class="topbar">
     <a class="brand-link" href="{% url 'home' %}">
-      <img class="brand-logo" src="{% static 'img/logo.svg' %}" alt="" width="46" height="46">
+      <img class="brand-logo" src="{% static 'img/logo.svg' %}" alt="" width="44" height="44">
       <span>
         <span class="brand-name">SkySnap</span>
         <span class="brand-tag">Live weather</span>
       </span>
     </a>
+    {% if weather or error %}
+      {% include "base/search_form.html" %}
+    {% endif %}
   </header>
-
-  <form class="search" action="{% url 'home' %}" method="get" role="search">
-    <label class="sr-only" for="city">City name</label>
-    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input id="city" type="text" name="city_name" value="{{ city }}" placeholder="Search any city…"
-           maxlength="100" enterkeyhint="search" spellcheck="false" required{% if not weather %} autofocus{% endif %}>
-    <button type="submit">Snap it</button>
-  </form>
 
   <main class="content">
     {% if weather %}
 
-      <article class="card weather" aria-labelledby="place">
-        <header>
-          <h1 class="place" id="place">
-            <span class="place-name">{{ weather.city }}</span>
-            {% if weather.country %}<span class="country">{{ weather.country }}</span>{% endif %}
-          </h1>
-          <p class="when">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            {{ weather.local_date }} · {{ weather.local_time }} local time
-          </p>
-        </header>
+      <div class="report">
+        <article class="card hero" aria-labelledby="place">
+          <header class="hero-head">
+            <h1 class="place" id="place">
+              <span class="place-name">{{ weather.city }}</span>
+              {% if weather.country %}<span class="country">{{ weather.country }}</span>{% endif %}
+            </h1>
+            <p class="when">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              {{ weather.local_date }} · {{ weather.local_time }} local time
+            </p>
+          </header>
 
-        <div class="now">
-          <p class="temp">
-            <span class="temp-value">{{ weather.temp|default_if_none:"–" }}</span><span class="temp-unit">°C</span>
-          </p>
-          {% if weather.icon %}
-            <img class="now-icon" src="https://openweathermap.org/img/wn/{{ weather.icon }}@4x.png" alt="" width="128" height="128">
-          {% endif %}
-        </div>
-        <p class="condition">{{ weather.description }}</p>
-        {% if weather.feels_like is not None %}
-          <p class="feels">Feels like {{ weather.feels_like }}°C</p>
-        {% endif %}
+          <div class="hero-art">{% include "base/weather_art.html" with art=weather.art %}</div>
 
-        <dl class="stats">
-          <div class="stat">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Humidity</dt>
-            <dd>{% if weather.humidity is not None %}{{ weather.humidity }}<small>%</small>{% else %}—{% endif %}</dd>
+          <div class="hero-now">
+            <p class="temp">
+              <span class="temp-value">{{ weather.temp|default_if_none:"–" }}</span><span class="temp-unit">°C</span>
+            </p>
+            <p class="condition">{{ weather.description }}</p>
+            {% if weather.feels_like is not None %}
+              <p class="feels">Feels like {{ weather.feels_like }}°C</p>
+            {% endif %}
           </div>
-          <div class="stat">
+        </article>
+
+        <dl class="details">
+
+          <div class="tile tile-wind">
             <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>Wind</dt>
             <dd>
-              {% if weather.wind_speed is not None %}{{ weather.wind_speed }}<small>km/h</small>{% else %}—{% endif %}
-              {% if weather.wind_direction %}<span class="stat-note">from {{ weather.wind_direction }}</span>{% endif %}
+              <span class="tile-value">{% if weather.wind_speed is not None %}{{ weather.wind_speed }}<small>km/h</small>{% else %}—{% endif %}</span>
+              {% if weather.wind_direction %}<span class="tile-note">from {{ weather.wind_direction }}</span>{% endif %}
+              {% if weather.wind_gust is not None %}<span class="tile-note">Gusts {{ weather.wind_gust }} km/h</span>{% endif %}
+              <span class="compass-wrap" aria-hidden="true">
+                <span class="compass">
+                  <span class="compass-point compass-n">N</span>
+                  <span class="compass-point compass-e">E</span>
+                  <span class="compass-point compass-s">S</span>
+                  <span class="compass-point compass-w">W</span>
+                  {% if weather.wind_degrees is not None %}
+                    {# The API gives where the wind comes from; the arrow shows where it blows. #}
+                    <svg class="compass-arrow" viewBox="0 0 24 24" style="--deg: {{ weather.wind_degrees|stringformat:'d' }}deg"><path d="M12 3 17 13h-3.5v8h-3v-8H7z"/></svg>
+                  {% endif %}
+                </span>
+              </span>
             </dd>
           </div>
-          <div class="stat">
+
+          <div class="tile">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>Humidity</dt>
+            <dd>
+              <span class="tile-value">{% if weather.humidity is not None %}{{ weather.humidity }}<small>%</small>{% else %}—{% endif %}</span>
+              {% if weather.humidity is not None %}<span class="meter" aria-hidden="true"><span style="--pct: {{ weather.humidity|stringformat:'d' }}%"></span></span>{% endif %}
+            </dd>
+          </div>
+
+          <div class="tile">
+            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>Cloud cover</dt>
+            <dd>
+              <span class="tile-value">{% if weather.cloud_cover is not None %}{{ weather.cloud_cover }}<small>%</small>{% else %}—{% endif %}</span>
+              {% if weather.cloud_cover is not None %}<span class="meter meter-cloud" aria-hidden="true"><span style="--pct: {{ weather.cloud_cover|stringformat:'d' }}%"></span></span>{% endif %}
+            </dd>
+          </div>
+
+          <div class="tile">
             <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>Pressure</dt>
-            <dd>{% if weather.pressure is not None %}{{ weather.pressure }}<small>hPa</small>{% else %}—{% endif %}</dd>
+            <dd><span class="tile-value">{% if weather.pressure is not None %}{{ weather.pressure }}<small>hPa</small>{% else %}—{% endif %}</span></dd>
           </div>
-          <div class="stat">
+
+          <div class="tile">
             <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Visibility</dt>
-            <dd>{% if weather.visibility is not None %}{{ weather.visibility|floatformat:"-1" }}<small>km</small>{% else %}—{% endif %}</dd>
+            <dd><span class="tile-value">{% if weather.visibility is not None %}{{ weather.visibility|floatformat:"-1" }}<small>km</small>{% else %}—{% endif %}</span></dd>
           </div>
-          <div class="stat">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v7"/><path d="m4.22 10.22 1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="m18.36 11.64 1.42-1.42"/><path d="M23 22H1"/><path d="m8 6 4-4 4 4"/></svg>Sunrise</dt>
-            <dd>{{ weather.sunrise|default:"—" }}</dd>
+
+          <div class="tile tile-sun">
+            <dt>
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>Sun
+              {% if weather.daylight %}<span class="tile-aside">{{ weather.daylight.length }} of daylight</span>{% endif %}
+            </dt>
+            <dd>
+              {% if weather.daylight %}
+                <span class="sun-track{% if not weather.daylight.sun_is_up %} is-down{% endif %}" aria-hidden="true">
+                  <span class="sun-arm" style="--p: {{ weather.daylight.progress|stringformat:'.3f' }}"></span>
+                </span>
+              {% endif %}
+              <span class="sun-times">
+                <span><small>Sunrise</small>{{ weather.sunrise|default:"—" }}</span>
+                <span><small>Sunset</small>{{ weather.sunset|default:"—" }}</span>
+              </span>
+            </dd>
           </div>
-          <div class="stat">
-            <dt><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 9V2"/><path d="m4.22 10.22 1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="m18.36 11.64 1.42-1.42"/><path d="M23 22H1"/><path d="m16 5-4 4-4-4"/></svg>Sunset</dt>
-            <dd>{{ weather.sunset|default:"—" }}</dd>
-          </div>
+
         </dl>
-      </article>
+      </div>
 
     {% elif error %}
 
@@ -105,10 +140,12 @@
 
     {% else %}
 
-      <section class="card welcome">
-        <img class="welcome-art" src="{% static 'img/logo.svg' %}" alt="" width="88" height="88">
+      <section class="welcome">
+        <div class="welcome-art">{% include "base/weather_art.html" with art="partly-day" %}</div>
         <h1>What's the sky doing?</h1>
-        <p>Search any city in the world for live temperature, wind, humidity and local time.</p>
+        <p class="welcome-lead">Search any city in the world for live temperature, wind, humidity and local time.</p>
+
+        {% include "base/search_form.html" %}
 
         {% if api_key_missing %}
           <p class="setup">

@@ -4,7 +4,7 @@ import requests
 from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 
-from .views import build_weather
+from .views import build_weather, daylight, sky_theme, weather_art
 
 # A real OpenWeather response for Mumbai, trimmed to the fields the app uses.
 MUMBAI = {
@@ -50,6 +50,9 @@ class HomeViewTests(SimpleTestCase):
         self.assertContains(response, 'Mumbai')
         self.assertContains(response, 'Haze')
         self.assertContains(response, 'data-sky="mist"')
+        self.assertContains(response, 'class="art-haze"')  # the mist drawing
+        self.assertContains(response, '--deg: 280deg')     # compass arrow
+        self.assertContains(response, 'class="sun-track')
         self.assertEqual(mock_get.call_args.kwargs['params']['q'], 'Mumbai')
         self.assertEqual(mock_get.call_args.kwargs['params']['appid'], 'test-key')
 
@@ -132,3 +135,56 @@ class BuildWeatherTests(SimpleTestCase):
     def test_polar_day_has_no_sunrise(self):
         payload = {**MUMBAI, 'sys': {'country': 'NO', 'sunrise': 0, 'sunset': 0}}
         self.assertIsNone(build_weather(payload)['sunrise'])
+        self.assertIsNone(build_weather(payload)['daylight'])
+
+    def test_converts_gusts_and_cloud_cover(self):
+        payload = {**MUMBAI, 'wind': {'speed': 5.66, 'deg': 280, 'gust': 10}, 'clouds': {'all': 40}}
+        weather = build_weather(payload)
+        self.assertEqual(weather['wind_gust'], 36)  # 10 m/s
+        self.assertEqual(weather['wind_degrees'], 280)
+        self.assertEqual(weather['cloud_cover'], 40)
+
+    def test_few_clouds_use_the_clear_sky(self):
+        self.assertEqual(sky_theme('Clouds', '02d'), 'clear')
+        self.assertEqual(sky_theme('Clouds', '02n'), 'night')
+        self.assertEqual(sky_theme('Clouds', '04d'), 'clouds')
+
+
+class WeatherArtTests(SimpleTestCase):
+
+    def test_clear_and_partly_cloudy_have_day_and_night_versions(self):
+        self.assertEqual(weather_art('Clear', '01d'), 'clear-day')
+        self.assertEqual(weather_art('Clear', '01n'), 'clear-night')
+        self.assertEqual(weather_art('Clouds', '02d'), 'partly-day')
+        self.assertEqual(weather_art('Clouds', '02n'), 'partly-night')
+
+    def test_icon_code_picks_the_drawing(self):
+        self.assertEqual(weather_art('Clouds', '04n'), 'cloudy')
+        self.assertEqual(weather_art('Drizzle', '09d'), 'rain')
+        self.assertEqual(weather_art('Thunderstorm', '11d'), 'storm')
+        self.assertEqual(weather_art('Snow', '13n'), 'snow')
+        self.assertEqual(weather_art('Haze', '50d'), 'mist')
+
+    def test_missing_icon_falls_back_to_condition(self):
+        self.assertEqual(weather_art('Rain', ''), 'rain')
+        self.assertEqual(weather_art('Clear', ''), 'clear-day')
+        self.assertEqual(weather_art('Tornado', ''), 'mist')
+
+
+class DaylightTests(SimpleTestCase):
+    SUNRISE = 1_000_000
+    SUNSET = SUNRISE + 12 * 3600 + 17 * 60  # 12h 17m later
+
+    def test_midday(self):
+        info = daylight(self.SUNRISE, self.SUNSET, (self.SUNRISE + self.SUNSET) / 2)
+        self.assertEqual(info, {'length': '12h 17m', 'progress': 0.5, 'sun_is_up': True})
+
+    def test_before_sunrise_and_after_sunset_hold_at_the_ends(self):
+        before = daylight(self.SUNRISE, self.SUNSET, self.SUNRISE - 60)
+        after = daylight(self.SUNRISE, self.SUNSET, self.SUNSET + 60)
+        self.assertEqual((before['progress'], before['sun_is_up']), (0, False))
+        self.assertEqual((after['progress'], after['sun_is_up']), (1, False))
+
+    def test_missing_times(self):
+        self.assertIsNone(daylight(0, self.SUNSET, self.SUNRISE))
+        self.assertIsNone(daylight(self.SUNRISE, None, self.SUNRISE))
