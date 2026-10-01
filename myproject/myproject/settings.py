@@ -47,6 +47,17 @@ ALLOWED_HOSTS = [
 # The OpenWeather key used by base.views. Empty until you fill in .env.
 OPENWEATHER_API_KEY = os.environ.get("API_KEY", "").strip()
 
+# Keys and chat models for the AI weather notes (base.insights). Optional:
+# with neither key the page leaves the notes out. Groq is used when both are
+# set, because its free plan has a daily limit instead of a monthly credit.
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "").strip() or "openai/gpt-oss-20b"
+
+# The ":novita" suffix pins Hugging Face's provider: it answered in under 2s,
+# where automatic routing took 4-10s.
+HF_TOKEN = os.environ.get("HF_TOKEN", "").strip()
+HF_MODEL = os.environ.get("HF_MODEL", "").strip() or "meta-llama/Llama-3.1-8B-Instruct:novita"
+
 
 # ── Applications ──────────────────────────────────────────────────────────────
 

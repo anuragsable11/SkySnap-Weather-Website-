@@ -6,6 +6,8 @@ import requests
 from django.conf import settings
 from django.shortcuts import render
 
+from .insights import weather_insights
+
 OPENWEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
 REQUEST_TIMEOUT = 10  # seconds
 
@@ -79,6 +81,7 @@ def home(request):
         context['weather'], context['error'] = fetch_weather(city)
         if context['weather']:
             place = place_query(context['weather'])
+            context['insights'] = weather_insights(context['weather'])
     if place:
         recent = remember(recent, place)
         # The dropdown skips the city already on screen.
@@ -209,6 +212,8 @@ def build_weather(payload):
         'sunrise': local_clock(sun.get('sunrise'), offset),
         'sunset': local_clock(sun.get('sunset'), offset),
         'daylight': daylight(sun.get('sunrise'), sun.get('sunset'), now.timestamp()),
+        'lat': lat,
+        'lon': lon,
         'coords': coordinates(lat, lon),
         'map': map_view(lat, lon),
     }

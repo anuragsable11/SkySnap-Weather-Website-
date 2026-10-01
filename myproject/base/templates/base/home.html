@@ -119,6 +119,10 @@
 
         </dl>
 
+        {% if insights %}
+          {% include "base/insights.html" %}
+        {% endif %}
+
         {% if weather.map %}
           {% include "base/location_map.html" with map=weather.map %}
         {% endif %}

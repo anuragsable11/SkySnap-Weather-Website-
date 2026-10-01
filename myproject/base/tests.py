@@ -1,10 +1,15 @@
 from unittest import mock
 from urllib.parse import quote
 
+import json
+
 import requests
+from django.core.cache import cache
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import reverse
 
+from .insights import (AIR_URL, FORECAST_URL, GROQ_CHAT_URL, HF_CHAT_URL, describe, parse_notes,
+                       uv_reading, weather_insights)
 from .views import (RECENT_COOKIE, build_weather, daylight, map_view, place_option,
                     read_recent, remember, sky_theme, weather_art)
 
@@ -28,7 +33,7 @@ def fake_response(status_code, payload):
     return response
 
 
-@override_settings(OPENWEATHER_API_KEY='test-key')
+@override_settings(OPENWEATHER_API_KEY='test-key', GROQ_API_KEY='', HF_TOKEN='')
 @mock.patch('base.views.requests.get')
 class HomeViewTests(SimpleTestCase):
 
@@ -148,6 +153,207 @@ class HomeViewTests(SimpleTestCase):
         self.assertContains(self.client.get(reverse('home')), 'One step left')
         self.assertContains(self.search('Mumbai'), 'Add API_KEY to your .env file')
         mock_get.assert_not_called()
+
+    def test_ai_notes_are_left_out_without_a_token(self, mock_get):
+        mock_get.return_value = fake_response(200, MUMBAI)
+        response = self.search('Mumbai')
+        self.assertIsNone(response.context['insights'])
+        self.assertNotContains(response, 'AI weather notes')
+        mock_get.assert_called_once()  # only the weather itself
+
+    @mock.patch('base.views.weather_insights')
+    def test_ai_notes_are_shown_under_the_weather(self, mock_insights, mock_get):
+        mock_get.return_value = fake_response(200, MUMBAI)
+        mock_insights.return_value = {
+            **NOTES,
+            'air': {'index': 5, 'label': 'Very poor', 'tone': 5},
+            'uv_now': uv_reading(5.3),
+            'uv_peak': uv_reading(7.5),
+        }
+        response = self.search('Mumbai')
+        self.assertEqual(mock_insights.call_args.args[0]['city'], 'Mumbai')
+        self.assertContains(response, 'AI weather notes')
+        self.assertContains(response, 'Rain likely after 4 PM.')
+        self.assertContains(response, 'Light cotton and an umbrella.')
+        self.assertContains(response, 'Wear a mask outdoors.')
+        self.assertContains(response, '<li class="fact" data-tone="5"><small>Air</small>Very poor</li>', html=True)
+        self.assertContains(response, '<li class="fact" data-tone="2"><small>UV now</small>5 · Moderate</li>', html=True)
+        self.assertContains(response, '<li class="fact" data-tone="4"><small>UV peak</small>8 · Very high</li>', html=True)
+
+    @mock.patch('base.views.weather_insights')
+    def test_ai_notes_are_escaped(self, mock_insights, mock_get):
+        mock_get.return_value = fake_response(200, MUMBAI)
+        mock_insights.return_value = {**NOTES, 'summary': '<b>Hot</b>', 'air': None,
+                                      'uv_now': None, 'uv_peak': None}
+        response = self.search('Mumbai')
+        self.assertContains(response, '&lt;b&gt;Hot&lt;/b&gt;')
+        self.assertNotContains(response, 'class="insight-facts"')
+
+
+# What the model is asked to write, as it comes back from parse_notes.
+NOTES = {
+    'summary': 'Rain likely after 4 PM.',
+    'wear': 'Light cotton and an umbrella.',
+    'health': 'Wear a mask outdoors.',
+}
+
+# Real Open-Meteo and OpenWeather air pollution responses, trimmed.
+FORECAST = {
+    'current': {'time': '2026-10-01T11:15', 'uv_index': 5.3},
+    'hourly': {
+        'time': ['2026-10-01T10:00', '2026-10-01T11:00', '2026-10-01T12:00', '2026-10-01T16:00'],
+        'temperature_2m': [31.7, 32.9, 33.3, 32.0],
+        'precipitation_probability': [0, 0, 7, 45],
+    },
+    'daily': {'uv_index_max': [7.5]},
+}
+AIR = {'list': [{'main': {'aqi': 5}, 'components': {'pm2_5': 122.91, 'pm10': 130.3}}]}
+
+
+def chat_response(content, status_code=200):
+    """A chat completion whose reply is `content`."""
+    response = fake_response(status_code, {'choices': [{'message': {'content': content}}]})
+    response.text = 'error details'
+    return response
+
+
+def fake_get(url, params, timeout):
+    """Answer the air quality and forecast requests like the real services."""
+    return fake_response(200, {AIR_URL: AIR, FORECAST_URL: FORECAST}[url])
+
+
+@override_settings(OPENWEATHER_API_KEY='test-key', GROQ_API_KEY='groq-test', GROQ_MODEL='test/groq',
+                   HF_TOKEN='hf-test', HF_MODEL='test/hf')
+@mock.patch('base.insights.requests.post')
+@mock.patch('base.insights.requests.get', side_effect=fake_get)
+class WeatherInsightsTests(SimpleTestCase):
+
+    def setUp(self):
+        cache.clear()  # notes are cached per place
+        self.weather = build_weather(MUMBAI)
+
+    def test_writes_notes_from_the_weather_air_and_uv(self, mock_get, mock_post):
+        mock_post.return_value = chat_response(json.dumps(NOTES))
+        insights = weather_insights(self.weather)
+
+        self.assertEqual({key: insights[key] for key in NOTES}, NOTES)
+        self.assertEqual(insights['air']['label'], 'Very poor')
+        self.assertEqual(insights['uv_now'], {'value': 5, 'label': 'Moderate', 'tone': 2})
+        self.assertEqual(insights['uv_peak'], {'value': 8, 'label': 'Very high', 'tone': 4})
+
+        # Groq is asked first when both keys are set.
+        self.assertEqual(mock_post.call_args.args[0], GROQ_CHAT_URL)
+        request = mock_post.call_args.kwargs
+        self.assertEqual(request['headers']['Authorization'], 'Bearer groq-test')
+        self.assertEqual(request['json']['model'], 'test/groq')
+        self.assertNotIn('reasoning_effort', request['json'])
+        facts = request['json']['messages'][1]['content']
+        self.assertIn('Place: Mumbai, IN', facts)
+        self.assertIn('Temperature: 31°C, feels like 38°C', facts)
+        self.assertIn('Air quality: Very poor (5 on a 1-5 scale where 5 is worst), PM2.5 123 µg/m³', facts)
+        self.assertIn("UV index now: 5 (Moderate), today's peak 8 (Very high)", facts)
+        # The forecast starts after the current hour (11 AM), not at 10 AM.
+        self.assertIn('Next hours: 12 PM 33°C 7% rain; 4 PM 32°C 45% rain', facts)
+
+    def test_reuses_notes_for_the_same_place(self, mock_get, mock_post):
+        mock_post.return_value = chat_response(json.dumps(NOTES))
+        first = weather_insights(self.weather)
+        self.assertEqual(weather_insights(self.weather), first)
+        mock_post.assert_called_once()
+
+    @override_settings(GROQ_API_KEY='')
+    def test_hugging_face_is_used_without_a_groq_key(self, mock_get, mock_post):
+        mock_post.return_value = chat_response(json.dumps(NOTES))
+        self.assertEqual(weather_insights(self.weather)['summary'], NOTES['summary'])
+        self.assertEqual(mock_post.call_args.args[0], HF_CHAT_URL)
+        self.assertEqual(mock_post.call_args.kwargs['headers']['Authorization'], 'Bearer hf-test')
+        self.assertEqual(mock_post.call_args.kwargs['json']['model'], 'test/hf')
+
+    @override_settings(GROQ_MODEL='openai/gpt-oss-20b')
+    def test_thinking_models_are_asked_to_think_briefly(self, mock_get, mock_post):
+        mock_post.return_value = chat_response(json.dumps(NOTES))
+        weather_insights(self.weather)
+        self.assertEqual(mock_post.call_args.kwargs['json']['reasoning_effort'], 'low')
+
+    def test_no_key_means_no_requests(self, mock_get, mock_post):
+        with self.settings(GROQ_API_KEY='', HF_TOKEN=''):
+            self.assertIsNone(weather_insights(self.weather))
+        mock_get.assert_not_called()
+        mock_post.assert_not_called()
+
+    def test_unknown_position_means_no_notes(self, mock_get, mock_post):
+        self.assertIsNone(weather_insights(build_weather({'name': 'Nowhere'})))
+        mock_post.assert_not_called()
+
+    def test_model_error_is_logged_and_not_retried_at_once(self, mock_get, mock_post):
+        mock_post.return_value = chat_response('', status_code=403)
+        with self.assertLogs('base.insights', 'WARNING') as logs:
+            self.assertIsNone(weather_insights(self.weather))
+        self.assertIn('Groq returned 403', logs.output[0])
+        self.assertIsNone(weather_insights(self.weather))
+        mock_post.assert_called_once()
+
+    def test_unreachable_model(self, mock_get, mock_post):
+        mock_post.side_effect = requests.Timeout
+        with self.assertLogs('base.insights', 'WARNING'):
+            self.assertIsNone(weather_insights(self.weather))
+
+    def test_unreadable_reply(self, mock_get, mock_post):
+        mock_post.return_value = chat_response('Sorry, I cannot help with that.')
+        with self.assertLogs('base.insights', 'WARNING') as logs:
+            self.assertIsNone(weather_insights(self.weather))
+        self.assertIn('could not read the model reply', logs.output[0])
+
+    def test_notes_still_come_without_air_and_uv(self, mock_get, mock_post):
+        mock_get.side_effect = requests.ConnectionError
+        mock_post.return_value = chat_response(json.dumps(NOTES))
+        insights = weather_insights(self.weather)
+        self.assertEqual(insights['summary'], NOTES['summary'])
+        self.assertIsNone(insights['air'])
+        self.assertIsNone(insights['uv_now'])
+        facts = mock_post.call_args.kwargs['json']['messages'][1]['content']
+        self.assertNotIn('Air quality', facts)
+        self.assertNotIn('Next hours', facts)
+
+
+class ParseNotesTests(SimpleTestCase):
+
+    def test_reads_json_wrapped_in_a_code_fence(self):
+        reply = 'Here you go:\n```json\n' + json.dumps(NOTES) + '\n```'
+        self.assertEqual(parse_notes(reply), NOTES)
+
+    def test_tidies_whitespace(self):
+        reply = json.dumps({**NOTES, 'wear': '  Light cotton,\n  sunglasses. '})
+        self.assertEqual(parse_notes(reply)['wear'], 'Light cotton, sunglasses.')
+
+    def test_missing_or_empty_note_rejects_the_reply(self):
+        self.assertIsNone(parse_notes(json.dumps({'summary': 'Hot.', 'wear': 'Shorts.'})))
+        self.assertIsNone(parse_notes(json.dumps({**NOTES, 'health': '  '})))
+        self.assertIsNone(parse_notes(json.dumps({**NOTES, 'health': ['Drink water.']})))
+        self.assertIsNone(parse_notes('{not json}'))
+        self.assertIsNone(parse_notes(''))
+
+
+class UvReadingTests(SimpleTestCase):
+
+    def test_who_bands(self):
+        labels = [uv_reading(value)['label'] for value in (0, 2.4, 2.6, 5, 6, 7.4, 8, 10, 11, 13)]
+        self.assertEqual(labels, ['Low', 'Low', 'Moderate', 'Moderate', 'High', 'High',
+                                  'Very high', 'Very high', 'Extreme', 'Extreme'])
+
+    def test_missing_value(self):
+        self.assertIsNone(uv_reading(None))
+
+
+class DescribeTests(SimpleTestCase):
+
+    def test_sparse_weather_skips_missing_facts(self):
+        facts = describe(build_weather({'name': 'Nowhere', 'main': {'temp': 1.4}}), None, {})
+        self.assertIn('Place: Nowhere', facts)
+        self.assertIn('Temperature: 1°C', facts)
+        self.assertNotIn('feels like', facts)
+        self.assertNotIn('Humidity', facts)
+        self.assertNotIn('Wind', facts)
 
 
 class BuildWeatherTests(SimpleTestCase):

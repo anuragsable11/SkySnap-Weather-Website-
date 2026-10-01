@@ -928,6 +928,141 @@ body[data-sky="clear"] .sky-fx::after {
 }
 
 
+/* ---- AI weather notes -----------------------------------------------------
+   Three cards below the report: a summary, what to wear, and health tips.
+   Stacked on phones, side by side on wider screens. Each card has its own
+   colour (--hue) that tints its icon and one corner of the glass.
+   -------------------------------------------------------------------------- */
+
+.report > .insights { grid-column: 1 / -1; }
+
+.insights-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.insights-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.insights-title .ic { color: var(--sun); }
+
+.insights-note {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.insights-grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 760px) {
+  .insights-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+.insight-summary { --hue: #a8d4ff; --wash: rgba(168, 212, 255, 0.14); }
+.insight-wear    { --hue: #ffd34d; --wash: rgba(255, 211, 77, 0.14); }
+.insight-health  { --hue: #ff9fb6; --wash: rgba(255, 159, 182, 0.14); }
+
+.card.insight {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: radial-gradient(circle at 0 0, var(--wash), transparent 60%), var(--glass);
+  border-radius: var(--radius-md);
+}
+
+@media (min-width: 480px) {
+  .card.insight { padding: 22px 24px; }
+}
+
+.insight-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.insight-label .ic {
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  color: var(--hue);
+  background: var(--wash);
+  border-radius: 50%;
+}
+
+.insight-text {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+/* Air quality and UV pills, pushed to the bottom of the card. */
+.insight-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 16px;
+  list-style: none;
+}
+
+.fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px 4px 9px;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.fact::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 8px var(--tone);
+}
+
+.fact small {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Tone 1 is best and 5 is worst, for air quality and UV alike. */
+.fact[data-tone="1"] { --tone: #7ee0a1; }
+.fact[data-tone="2"] { --tone: #d4e86a; }
+.fact[data-tone="3"] { --tone: #ffc95c; }
+.fact[data-tone="4"] { --tone: #ff8a5c; }
+.fact[data-tone="5"] { --tone: #e879f9; }
+
+
 /* ---- Location map ---------------------------------------------------------
    OpenStreetMap tiles, darkened with a filter and tinted with the sky's
    colour so the map matches the weather. The city sits in the centre under
@@ -1656,6 +1791,24 @@ body[data-sky="clear"] .sky-fx::after {
   .map-open { transition: background-color 0.2s, border-color 0.2s, scale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
   .map-open:hover { scale: 1.05; }
   .map-open:hover .ic { animation: nudge-out 0.6s ease-in-out; }
+
+  /* AI notes: the cards rise in one after another, their pills spring in
+     after them, and the sparkle by the title twinkles. */
+  .insights-head { animation: rise 0.5s ease-out 0.3s backwards; }
+  .ic-spark { animation: twinkle 3.5s ease-in-out 1s infinite; }
+  .insight {
+    animation: card-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s backwards;
+    transition: translate 0.3s ease, border-color 0.3s;
+  }
+  .insight-wear { animation-delay: 0.45s; }
+  .insight-health { animation-delay: 0.55s; }
+  .insight:hover {
+    translate: 0 -4px;
+    border-color: rgba(106, 170, 240, 0.40);
+  }
+  .fact { animation: chip-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.95s backwards; }
+  .fact:nth-child(2) { animation-delay: 1.02s; }
+  .fact:nth-child(3) { animation-delay: 1.09s; }
 }
 
 

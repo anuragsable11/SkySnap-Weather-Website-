@@ -11,6 +11,7 @@ A clean, minimal weather app built with Django. Search any city in the world to 
 * 🌡️ Temperature and "feels like" in °C
 * 💧 Humidity, wind speed and direction, pressure and visibility
 * 🌅 Sunrise and sunset in the city's own timezone
+* 🤖 AI weather notes (optional, needs a free Groq key): a short summary of the coming hours, what to wear, and health tips that take air quality and UV into account
 * 🗺️ A dark map of where the city is, tinted to match the weather, with a link to the full map on OpenStreetMap
 * 🕒 The city's local date and time
 * 🎨 Glass-style UI whose background changes with the weather (clear, night, clouds, rain, storm, snow, mist)
@@ -24,7 +25,7 @@ A clean, minimal weather app built with Django. Search any city in the world to 
 
 * **Backend:** Python 3.12+, Django 6.1
 * **Frontend:** Django templates and plain CSS
-* **API:** OpenWeather Current Weather API
+* **APIs:** OpenWeather (current weather and air quality), Open-Meteo (UV and hourly forecast, no key needed), Groq or Hugging Face Inference Providers (AI notes)
 
 ---
 
@@ -78,6 +79,18 @@ API_KEY=your_openweather_key
 
 Get a free key at [home.openweathermap.org/api_keys](https://home.openweathermap.org/api_keys). A new key can take up to a couple of hours to activate. Until it does, searches show "The API key was rejected".
 
+**Optional: AI weather notes.** To show the AI summary, outfit and health cards, add a free Groq key too:
+
+```env
+GROQ_API_KEY=gsk_your_key
+```
+
+Create it at [console.groq.com/keys](https://console.groq.com/keys). No credit card is needed. The free plan allows 1,000 requests a day, and the notes for each city are reused for 30 minutes. The default model is `openai/gpt-oss-20b`; set `GROQ_MODEL` to use another (for example `qwen/qwen3.8-27b`).
+
+You can use a Hugging Face token (`HF_TOKEN`) instead. It is only used when `GROQ_API_KEY` is empty. Its free plan has just a small monthly credit; when that runs out, the API answers "402: You have depleted your monthly included credits".
+
+Without a key, or if the model can't be reached, the cards are simply left out, and the reason is printed in the server console.
+
 ### 5. Set up the database and run the server
 
 ```bash
@@ -103,7 +116,7 @@ cd myproject
 python manage.py test
 ```
 
-The tests mock the OpenWeather API, so they need no API key or internet connection.
+The tests mock OpenWeather, Open-Meteo, Groq and Hugging Face, so they need no API keys or internet connection.
 
 ---
 
@@ -112,6 +125,10 @@ The tests mock the OpenWeather API, so they need no API key or internet connecti
 | Variable        | Required       | Description                                                        |
 | --------------- | -------------- | ------------------------------------------------------------------ |
 | `API_KEY`       | Yes            | Your OpenWeather API key                                           |
+| `GROQ_API_KEY`  | No             | Free Groq key. Turns on the AI weather notes.                      |
+| `GROQ_MODEL`    | No             | Groq chat model. Defaults to `openai/gpt-oss-20b`.                 |
+| `HF_TOKEN`      | No             | Hugging Face token, used for the notes when there is no Groq key.  |
+| `HF_MODEL`      | No             | Hugging Face chat model. Defaults to `meta-llama/Llama-3.1-8B-Instruct:novita`. |
 | `SECRET_KEY`    | For deployment | Django secret key. A development-only fallback is used if unset.   |
 | `DEBUG`         | No             | `True` by default. Set to `False` in production.                   |
 | `ALLOWED_HOSTS` | For deployment | Comma-separated host names. Defaults to `localhost,127.0.0.1`.     |
@@ -131,6 +148,7 @@ SkySnap-Weather-Website-/
     ├── myproject/            # Settings and root URL config
     ├── base/                 # The weather app
     │   ├── views.py          # Calls OpenWeather and prepares the data
+    │   ├── insights.py       # AI weather notes (Groq / Hugging Face), air quality and UV
     │   ├── tests.py
     │   └── templates/base/home.html
     ├── templates/main.html   # Base page layout
@@ -141,7 +159,9 @@ SkySnap-Weather-Website-/
 
 ## 📌 API Used
 
-* Weather data provided by [OpenWeather](https://openweathermap.org/)
+* Weather and air quality data provided by [OpenWeather](https://openweathermap.org/)
+* UV index and hourly forecast from [Open-Meteo](https://open-meteo.com/)
+* AI notes written by a chat model on [Groq](https://groq.com/) or [Hugging Face Inference Providers](https://huggingface.co/docs/inference-providers)
 
 ---
 
