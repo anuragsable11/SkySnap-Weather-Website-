@@ -1,1 +1,1 @@
-{# A whole number that counts up from zero as the page loads (see "Motion" in style.css). The real value stays in the page for screen readers and copying. #}<span class="count" style="--to: {{ value|stringformat:'d' }}"><span class="count-num">{{ value }}</span></span>
+{% load weather_format %}{# A whole number that counts up from zero as the page loads (see "Motion" in style.css). The real value stays in the page for screen readers and copying. #}<span class="count" style="--to: {{ value|stringformat:'d' }}"><span class="count-num">{{ value|minus }}</span></span>

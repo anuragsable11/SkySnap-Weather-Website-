@@ -1,0 +1,17 @@
+{% comment %}
+  A labelled row of city links. Pass label=, places= (dicts from
+  base.views.place_option) and recent=True to mark them as past searches.
+{% endcomment %}
+<div class="chips-group">
+  <p class="chips-label">{{ label }}</p>
+  <ul class="chips" aria-label="{{ label }}">
+    {% for place in places %}
+      <li>
+        <a class="chip" href="{% url 'home' %}?city_name={{ place.query|urlencode }}">
+          {% if recent %}<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>{% endif %}
+          {{ place.name }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>

@@ -10,6 +10,7 @@ from django.urls import reverse
 
 from .insights import (AIR_URL, FORECAST_URL, GROQ_CHAT_URL, HF_CHAT_URL, describe, parse_notes,
                        uv_reading, weather_insights)
+from .templatetags.weather_format import minus
 from .views import (RECENT_COOKIE, build_weather, daylight, map_view, place_option,
                     read_recent, remember, sky_theme, weather_art)
 
@@ -68,6 +69,11 @@ class HomeViewTests(SimpleTestCase):
         self.assertContains(response, 'Recent searches')
         self.assertContains(response, '?city_name=Paris%2CFR')
         self.assertEqual([p['name'] for p in response.context['recent_cities']], ['Paris', 'Tokyo'])
+        # The welcome page also offers them as one-tap links, and its popular
+        # suggestions leave them out so no city is offered twice.
+        self.assertContains(response, '<p class="chips-label">Recent</p>', html=True)
+        ideas = [p['name'] for p in response.context['city_ideas']]
+        self.assertEqual(ideas, ['London', 'New York', 'Mumbai', 'Sydney', 'Dubai', 'Singapore'])
 
     def test_new_search_moves_to_the_front_without_repeats(self, mock_get):
         mock_get.return_value = fake_response(200, MUMBAI)
@@ -98,9 +104,9 @@ class HomeViewTests(SimpleTestCase):
         self.assertContains(response, 'class="art-haze"')  # the mist drawing
         self.assertContains(response, '--deg: 280deg')     # compass arrow
         self.assertContains(response, 'class="sun-track')
-        # Numbers count up on load, with the real value kept for screen readers.
+        # The temperature counts up on load, with the real value kept for screen readers.
         self.assertContains(response, '<span class="count" style="--to: 31"><span class="count-num">31</span></span>', html=True)
-        self.assertContains(response, 'style="--to: 1008"')  # pressure
+        self.assertContains(response, '<span class="reading-value">1008<small>hPa</small></span>', html=True)
         # The location map, centred on the city.
         self.assertContains(response, 'class="card map-card"')
         self.assertContains(response, '19.01° N, 72.85° E')
@@ -148,6 +154,13 @@ class HomeViewTests(SimpleTestCase):
         self.assertContains(response, 'Nowhere')
         self.assertContains(response, '—')
 
+    def test_temperatures_below_zero_use_a_minus_sign(self, mock_get):
+        mock_get.return_value = fake_response(200, {**MUMBAI, 'main': {'temp': -2.4, 'feels_like': -6.8}})
+        response = self.search('Mumbai')
+        self.assertContains(response, '<span class="count" style="--to: -2"><span class="count-num">−2</span></span>', html=True)
+        self.assertContains(response, 'Feels like −7°C')
+        self.assertContains(response, '<title>Mumbai · −2°C · SkySnap</title>', html=True)
+
     @override_settings(OPENWEATHER_API_KEY='')
     def test_missing_key_prompts_setup_without_calling_api(self, mock_get):
         self.assertContains(self.client.get(reverse('home')), 'One step left')
@@ -158,7 +171,9 @@ class HomeViewTests(SimpleTestCase):
         mock_get.return_value = fake_response(200, MUMBAI)
         response = self.search('Mumbai')
         self.assertIsNone(response.context['insights'])
-        self.assertNotContains(response, 'AI weather notes')
+        self.assertNotContains(response, 'Today in brief')
+        self.assertNotContains(response, 'Plan your day')
+        self.assertNotContains(response, 'Open-Meteo')  # its data is only used for the notes
         mock_get.assert_called_once()  # only the weather itself
 
     @mock.patch('base.views.weather_insights')
@@ -172,7 +187,9 @@ class HomeViewTests(SimpleTestCase):
         }
         response = self.search('Mumbai')
         self.assertEqual(mock_insights.call_args.args[0]['city'], 'Mumbai')
-        self.assertContains(response, 'AI weather notes')
+        self.assertContains(response, 'Today in brief')  # the summary leads the hero
+        self.assertContains(response, 'Plan your day')
+        self.assertContains(response, 'https://open-meteo.com/')  # credited for the UV and forecast
         self.assertContains(response, 'Rain likely after 4 PM.')
         self.assertContains(response, 'Light cotton and an umbrella.')
         self.assertContains(response, 'Wear a mask outdoors.')
@@ -509,3 +526,15 @@ class RecentSearchTests(SimpleTestCase):
         self.assertEqual(place_option('New York,US'), {'query': 'New York,US', 'name': 'New York', 'country': 'US'})
         self.assertEqual(place_option('Washington, D.C.,US')['name'], 'Washington, D.C.')
         self.assertEqual(place_option('Nowhere'), {'query': 'Nowhere', 'name': 'Nowhere', 'country': ''})
+
+
+class MinusFilterTests(SimpleTestCase):
+
+    def test_negative_readings_get_a_minus_sign(self):
+        self.assertEqual(minus(-2), '\u22122')
+        self.assertEqual(minus(-0.5), '\u22120.5')
+
+    def test_other_readings_are_unchanged(self):
+        self.assertEqual(minus(31), '31')
+        self.assertEqual(minus(0), '0')
+        self.assertIsNone(minus(None))

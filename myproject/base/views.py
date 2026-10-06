@@ -11,12 +11,15 @@ from .insights import weather_insights
 OPENWEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
 REQUEST_TIMEOUT = 10  # seconds
 
-# Offered in the search dropdown; the first six are also shown as chips.
+# Offered in the search dropdown; six are also shown as chips (see CITY_IDEAS).
 # Searching "Name,CC" makes OpenWeather pick the right country's city.
 POPULAR_CITIES = [
     'London,GB', 'New York,US', 'Tokyo,JP', 'Mumbai,IN', 'Paris,FR', 'Sydney,AU',
     'Dubai,AE', 'Singapore,SG', 'Delhi,IN', 'Toronto,CA', 'Cape Town,ZA', 'Rio de Janeiro,BR',
 ]
+
+# How many popular cities the welcome page suggests as one-tap links.
+CITY_IDEAS = 6
 
 # The last few cities found are kept in a cookie for the search dropdown.
 RECENT_COOKIE = 'recent_cities'
@@ -88,6 +91,11 @@ def home(request):
         context['recent_cities'] = [place_option(query) for query in recent[1:]]
     else:
         context['recent_cities'] = [place_option(query) for query in recent]
+    # Suggestions on the welcome page skip cities already offered as recent searches.
+    offered = {query.lower() for query in recent}
+    context['city_ideas'] = [
+        place_option(query) for query in POPULAR_CITIES if query.lower() not in offered
+    ][:CITY_IDEAS]
 
     response = render(request, 'base/home.html', context)
     if place:
