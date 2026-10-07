@@ -11,6 +11,9 @@
 
 {% block credits %}{{ block.super }}{% if insights %} · UV and forecast from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>{% endif %}{% endblock %}
 
+{# The conditions the 3D weather scene is drawn from (static/js/weather/boot.js). #}
+{% block scene_data %}{% if weather %}{{ weather.scene|json_script:"weather-data" }}{% endif %}{% endblock %}
+
 {% block content %}
 {% if weather %}
 

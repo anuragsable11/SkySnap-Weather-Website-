@@ -1,15 +1,16 @@
 /* ==========================================================================
    SkySnap styles
 
-   One stylesheet and no JavaScript. The page background is the searched
-   city's sky, and the weather is set on it like a printed almanac: a serif
-   for places and the temperature, a sans for the interface, and a mono for
-   instrument readings.
+   One stylesheet. The page background is the searched city's sky, and the
+   weather is set on it like a printed almanac: a serif for places and the
+   temperature, a sans for the interface, and a mono for instrument
+   readings. The only JavaScript draws an optional 3D weather scene between
+   the sky and the page (static/js/weather); everything works without it.
 
-   Contents: tokens · sky themes · base · layout · header · search · city
-   suggestions · buttons and chips · hero · sections and cards · readings ·
-   plan your day · daylight · location map · welcome · states · footer ·
-   accessibility preferences · motion
+   Contents: tokens · sky themes · base · sky effects · weather scene ·
+   layout · header · search · city suggestions · buttons and chips · hero ·
+   sections and cards · readings · plan your day · daylight · location map ·
+   welcome · states · footer · accessibility preferences · motion
    ========================================================================== */
 
 
@@ -89,6 +90,7 @@
 
   /* Motion: short and decelerating. Everything that moves is under "Motion". */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
   --dur-1: 120ms;  /* hover, press */
   --dur-2: 200ms;  /* menus, focus */
@@ -108,15 +110,22 @@
    with a hint of dawn on the horizon. The hero sits on the sky with no card,
    so the brightest skies (clear day, snow) get lighter label ink and darker
    cards; every ink stays at 4.5:1 or more where it is used.
+
+   While a new page loads, html[data-sky-from] holds the last page's sky
+   (set by the inline script in main.html), and its colours win over the
+   page's own. Removing it lets them glide to the new sky (see "Motion").
    -------------------------------------------------------------------------- */
 
-body[data-sky="clear"]  { --sky-top: #082d66; --sky-mid: #0f4389; --sky-low: #1a5aa8; --glow: rgba(255, 214, 120, 0.42); --horizon: rgba(255, 206, 140, 0.16); --surface: rgba(3, 12, 34, 0.5); --ink-3: #bbc4d4; --accent: #96ceff; }
-body[data-sky="night"]  { --sky-top: #02050f; --sky-mid: #071029; --sky-low: #0d1b3e; --glow: rgba(200, 215, 255, 0.13); --horizon: rgba(90, 110, 190, 0.16); }
-body[data-sky="clouds"] { --sky-top: #131a28; --sky-mid: #222e43; --sky-low: #313f57; --glow: rgba(200, 215, 235, 0.12); --horizon: rgba(170, 190, 220, 0.10); }
-body[data-sky="rain"]   { --sky-top: #070f1d; --sky-mid: #11233c; --sky-low: #1a3352; --glow: rgba(110, 160, 220, 0.15); --horizon: rgba(80, 140, 210, 0.14); }
-body[data-sky="storm"]  { --sky-top: #09071a; --sky-mid: #191335; --sky-low: #261d4b; --glow: rgba(170, 130, 255, 0.20); --horizon: rgba(150, 110, 240, 0.14); }
-body[data-sky="snow"]   { --sky-top: #142036; --sky-mid: #273b5e; --sky-low: #38527a; --glow: rgba(235, 242, 255, 0.22); --horizon: rgba(220, 232, 255, 0.12); --surface: rgba(4, 12, 32, 0.5); --ink-3: #abb6c9; }
-body[data-sky="mist"]   { --sky-top: #161a25; --sky-mid: #272f40; --sky-low: #364055; --glow: rgba(215, 222, 232, 0.13); --horizon: rgba(210, 218, 230, 0.10); }
+body[data-sky="clear"],  [data-sky-from="clear"] body[data-sky]  { --sky-top: #082d66; --sky-mid: #0f4389; --sky-low: #1a5aa8; --glow: rgba(255, 214, 120, 0.42); --horizon: rgba(255, 206, 140, 0.16); --surface: rgba(3, 12, 34, 0.5); --ink-3: #bbc4d4; --accent: #96ceff; }
+body[data-sky="night"],  [data-sky-from="night"] body[data-sky]  { --sky-top: #02050f; --sky-mid: #071029; --sky-low: #0d1b3e; --glow: rgba(200, 215, 255, 0.13); --horizon: rgba(90, 110, 190, 0.16); }
+body[data-sky="clouds"], [data-sky-from="clouds"] body[data-sky] { --sky-top: #131a28; --sky-mid: #222e43; --sky-low: #313f57; --glow: rgba(200, 215, 235, 0.12); --horizon: rgba(170, 190, 220, 0.10); }
+body[data-sky="rain"],   [data-sky-from="rain"] body[data-sky]   { --sky-top: #070f1d; --sky-mid: #11233c; --sky-low: #1a3352; --glow: rgba(110, 160, 220, 0.15); --horizon: rgba(80, 140, 210, 0.14); }
+body[data-sky="storm"],  [data-sky-from="storm"] body[data-sky]  { --sky-top: #09071a; --sky-mid: #191335; --sky-low: #261d4b; --glow: rgba(170, 130, 255, 0.20); --horizon: rgba(150, 110, 240, 0.14); }
+body[data-sky="snow"],   [data-sky-from="snow"] body[data-sky]   { --sky-top: #142036; --sky-mid: #273b5e; --sky-low: #38527a; --glow: rgba(235, 242, 255, 0.22); --horizon: rgba(220, 232, 255, 0.12); --surface: rgba(4, 12, 32, 0.5); --ink-3: #abb6c9; }
+body[data-sky="mist"],   [data-sky-from="mist"] body[data-sky]   { --sky-top: #161a25; --sky-mid: #272f40; --sky-low: #364055; --glow: rgba(215, 222, 232, 0.13); --horizon: rgba(210, 218, 230, 0.10); }
+
+/* The default sky is the :root one, so coming from it means taking it back. */
+[data-sky-from="default"] body[data-sky] { --sky-top: inherit; --sky-mid: inherit; --sky-low: inherit; --glow: inherit; --horizon: inherit; --surface: inherit; --ink-3: inherit; --accent: inherit; }
 
 
 /* ---- Base ---------------------------------------------------------------- */
@@ -363,6 +372,82 @@ body[data-sky="mist"] .sky-fx::after {
   height: 60%;
   background: linear-gradient(transparent, rgba(215, 222, 235, 0.10));
 }
+
+
+/* ---- Weather scene --------------------------------------------------------
+   A Three.js canvas (static/js/weather) draws the weather in 3D: sun or
+   moon, clouds in depth, mist, rain, snow and lightning. It is transparent
+   and sits between the sky above and the page, so the sky and its colours
+   stay the ones set here; the scene only adds weather to them.
+
+   Layers, back to front: the sky (body::before), the scene, then the page.
+   The scene fades in once its first frame is drawn (.sky3d-on) and takes
+   over from the CSS particles, which also step aside while it loads after
+   a search (.sky3d-handoff). Without WebGL, or if anything fails, neither
+   class is set and the page is exactly as it was.
+   -------------------------------------------------------------------------- */
+
+.sky3d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;  /* the tallest the viewport gets, so a phone's address bar never resizes it */
+  pointer-events: none;
+  opacity: 0;
+}
+
+.sky3d-on .sky3d { opacity: 1; }
+
+.sky3d-handoff .sky-fx,
+.sky3d-on .sky-fx {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* With weather moving behind them, cards frost what they cover so their
+   text stays calm. Only on devices with power to spare (capability.js);
+   the map card is opaque, so it is left out. */
+.sky3d-on[data-sky3d-tier="high"] .card:not(.map-card) {
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+/* Shown only if the scene takes a while to load, in open sky under the
+   header, where no text sits. */
+.sky3d-status {
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-2));
+  right: var(--gutter);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px 6px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.sky3d-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.sky3d-status.is-visible { opacity: 1; }
 
 
 /* ---- Layout -------------------------------------------------------------- */
@@ -1745,12 +1830,22 @@ body[data-sky="mist"] .sky-fx::after {
   }
 }
 
+@media (prefers-contrast: more) {
+  .sky3d-on .sky3d { opacity: 0.55; }
+}
+
 @media (forced-colors: active) {
   .meter > span,
   .sun-done { forced-color-adjust: none; }
   .card,
   .search,
   .chip { border-color: CanvasText; }
+  .sky3d { display: none; }
+}
+
+@media print {
+  .sky3d,
+  .sky3d-status { display: none; }
 }
 
 
@@ -1774,6 +1869,14 @@ body[data-sky="mist"] .sky-fx::after {
   inherits: true;
   initial-value: 0;
 }
+
+/* The sky's colours, so a new weather's sky can blend in from the last
+   one's. Initial values match :root. */
+@property --sky-top { syntax: '<color>'; inherits: true; initial-value: #040817; }
+@property --sky-mid { syntax: '<color>'; inherits: true; initial-value: #0a1430; }
+@property --sky-low { syntax: '<color>'; inherits: true; initial-value: #13234a; }
+@property --glow { syntax: '<color>'; inherits: true; initial-value: rgba(130, 160, 255, 0.16); }
+@property --horizon { syntax: '<color>'; inherits: true; initial-value: rgba(255, 186, 140, 0.10); }
 
 /* Counts below zero with a true minus sign, matching the minus filter. */
 @counter-style signed {
@@ -1883,6 +1986,25 @@ body[data-sky="mist"] .sky-fx::after {
   .btn .ic { transition: transform var(--dur-1); }
 
 
+  /* Sky: after a search the last city's sky turns into this one's, in step
+     with the 3D scene, whose clouds and air change over the same stretch
+     (js/weather/manager.js). */
+  body {
+    transition:
+      --sky-top 1.3s var(--ease-in-out) 0.25s,
+      --sky-mid 1.3s var(--ease-in-out) 0.25s,
+      --sky-low 1.3s var(--ease-in-out) 0.25s,
+      --glow 1.3s var(--ease-in-out) 0.25s,
+      --horizon 1.3s var(--ease-in-out) 0.25s;
+  }
+
+  .sky3d { transition: opacity 0.7s var(--ease-out); }
+  .sky-fx { transition: opacity 0.6s ease, visibility 0s; }
+  .sky3d-handoff .sky-fx,
+  .sky3d-on .sky-fx { transition: opacity 0.6s ease, visibility 0s linear 0.6s; }
+  .sky3d-status { transition: opacity var(--dur-3) var(--ease-out); }
+  .sky3d-status::before { animation: status-pulse 1.4s ease-in-out infinite alternate; }
+
   /* Sky: slow, quiet movement that matches the weather. */
   body[data-sky="default"] .sky-fx::after,
   body[data-sky="night"] .sky-fx::after { animation: twinkle-layer 5s ease-in-out infinite alternate; }
@@ -1961,6 +2083,10 @@ body[data-sky="mist"] .sky-fx::after {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes status-pulse {
+  to { opacity: 0.3; }
 }
 
 /* Weather art */

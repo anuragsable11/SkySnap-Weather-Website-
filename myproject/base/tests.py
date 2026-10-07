@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from unittest import mock
 from urllib.parse import quote
 
@@ -114,6 +115,25 @@ class HomeViewTests(SimpleTestCase):
         self.assertContains(response, 'https://www.openstreetmap.org/?mlat=19.0144&amp;mlon=72.8479')
         self.assertEqual(mock_get.call_args.kwargs['params']['q'], 'Mumbai')
         self.assertEqual(mock_get.call_args.kwargs['params']['appid'], 'test-key')
+
+    def test_found_city_hands_its_conditions_to_the_weather_scene(self, mock_get):
+        mock_get.return_value = fake_response(200, MUMBAI)
+        response = self.search('Mumbai')
+        self.assertContains(response, '<script id="weather-data" type="application/json">')
+        self.assertEqual(response.context['weather']['scene']['code'], 721)
+        self.assertContains(response, 'js/weather/boot.js')
+        mock_get.assert_called_once()  # the scene reuses this page's weather, no second request
+
+    def test_pages_without_weather_have_no_scene_data(self, mock_get):
+        response = self.client.get(reverse('home'))
+        self.assertContains(response, 'js/weather/boot.js')  # the welcome page's own quiet scene
+        self.assertNotContains(response, 'id="weather-data"')
+
+    def test_scene_data_is_escaped(self, mock_get):
+        mock_get.return_value = fake_response(200, {**MUMBAI, 'weather': [{'id': 800, 'main': '</script><b>', 'icon': '01d'}]})
+        response = self.search('Mumbai')
+        self.assertNotContains(response, '</script><b>')
+        self.assertContains(response, '\\u003C/script\\u003E\\u003Cb\\u003E')
 
     def test_unknown_city(self, mock_get):
         mock_get.return_value = fake_response(404, {'cod': '404', 'message': 'city not found'})
@@ -419,6 +439,32 @@ class BuildWeatherTests(SimpleTestCase):
         self.assertEqual(sky_theme('Clouds', '02d'), 'clear')
         self.assertEqual(sky_theme('Clouds', '02n'), 'night')
         self.assertEqual(sky_theme('Clouds', '04d'), 'clouds')
+
+    def test_scene_readings_keep_the_raw_conditions(self):
+        payload = {**MUMBAI, 'clouds': {'all': 40}}
+        scene = build_weather(payload)['scene']
+        # The condition code and the API's own units, for static/js/weather/mapper.js.
+        self.assertEqual(scene['code'], 721)
+        self.assertEqual(scene['main'], 'Haze')
+        self.assertEqual(scene['icon'], '50d')
+        self.assertEqual(scene['sky'], 'mist')
+        self.assertEqual(scene['clouds'], 40)
+        self.assertEqual(scene['wind'], 5.66)
+        self.assertEqual(scene['wind_deg'], 280)
+        self.assertEqual(scene['visibility'], 4500)
+
+    def test_scene_readings_follow_the_sun(self):
+        with mock.patch('base.views.datetime') as fake_datetime:
+            fake_datetime.now.return_value = datetime.fromtimestamp(
+                (MUMBAI['sys']['sunrise'] + MUMBAI['sys']['sunset']) / 2, tz=timezone.utc)
+            fake_datetime.fromtimestamp.side_effect = datetime.fromtimestamp
+            self.assertEqual(build_weather(MUMBAI)['scene']['daylight'], 0.5)
+
+    def test_sparse_response_has_empty_scene_readings(self):
+        scene = build_weather({'name': 'Nowhere'})['scene']
+        self.assertIsNone(scene['code'])
+        self.assertIsNone(scene['daylight'])
+        self.assertEqual(scene['sky'], 'mist')
 
 
 class WeatherArtTests(SimpleTestCase):

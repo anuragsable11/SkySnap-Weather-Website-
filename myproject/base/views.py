@@ -192,9 +192,11 @@ def build_weather(payload):
 
     condition = weather.get('main') or ''
     icon = weather.get('icon') or ''
+    sky = sky_theme(condition, icon)
     wind_speed = wind.get('speed')
     wind_gust = wind.get('gust')
     visibility = payload.get('visibility')
+    light = daylight(sun.get('sunrise'), sun.get('sunset'), now.timestamp())
 
     return {
         'city': payload.get('name') or '',
@@ -202,7 +204,7 @@ def build_weather(payload):
         'condition': condition,
         'description': (weather.get('description') or condition).capitalize(),
         'icon': icon,
-        'sky': sky_theme(condition, icon),
+        'sky': sky,
         'art': weather_art(condition, icon),
         'temp': rounded(main.get('temp')),
         'feels_like': rounded(main.get('feels_like')),
@@ -219,11 +221,26 @@ def build_weather(payload):
         'local_time': clock(local_now),
         'sunrise': local_clock(sun.get('sunrise'), offset),
         'sunset': local_clock(sun.get('sunset'), offset),
-        'daylight': daylight(sun.get('sunrise'), sun.get('sunset'), now.timestamp()),
+        'daylight': light,
         'lat': lat,
         'lon': lon,
         'coords': coordinates(lat, lon),
         'map': map_view(lat, lon),
+        # Readings for the 3D weather scene, passed to the page as JSON and
+        # read by static/js/weather/mapper.js. The condition code grades
+        # rain and snow by how heavy they are; wind is in m/s and visibility
+        # in metres, as the API gives them.
+        'scene': {
+            'code': weather.get('id'),
+            'main': condition,
+            'icon': icon,
+            'sky': sky,
+            'clouds': clouds.get('all'),
+            'wind': wind_speed,
+            'wind_deg': wind.get('deg'),
+            'visibility': visibility,
+            'daylight': light['progress'] if light else None,
+        },
     }
 
 

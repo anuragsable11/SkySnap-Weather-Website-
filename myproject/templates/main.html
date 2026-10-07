@@ -13,6 +13,23 @@
   {# Newsreader for places and the temperature, Geist for the interface, Geist Mono for readings. Only the display weight and italic of Newsreader are loaded. #}
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,72,400;1,72,400&display=swap">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {# Starts this page on the last page's sky colours so the weather can change smoothly, and hides the CSS sky particles while the 3D scene loads. js/weather/boot.js takes over from here; if it never runs, the page goes back to normal after 1.5s. #}
+  <script>
+    (function (root) {
+      try {
+        var sky = sessionStorage.getItem('skysnap:sky');
+        if (!sky || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        root.setAttribute('data-sky-from', sky);
+        if (window.WebGL2RenderingContext) root.classList.add('sky3d-handoff');
+        setTimeout(function () {
+          if (root.classList.contains('sky3d-boot')) return;
+          root.removeAttribute('data-sky-from');
+          root.classList.remove('sky3d-handoff');
+        }, 1500);
+      } catch (e) {}
+    })(document.documentElement);
+  </script>
+  <script type="module" src="{% static 'js/weather/boot.js' %}"></script>
 </head>
 <body data-sky="{% block sky %}default{% endblock %}">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -38,5 +55,6 @@
       <p class="footer-credits">{% block credits %}Weather data from <a href="https://openweathermap.org/" target="_blank" rel="noopener">OpenWeather</a>{% endblock %}</p>
     </div>
   </footer>
+  {% block scene_data %}{% endblock %}
 </body>
 </html>

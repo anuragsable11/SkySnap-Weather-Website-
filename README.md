@@ -15,8 +15,9 @@ A clean, minimal weather app built with Django. Search any city in the world to 
 * 🗺️ A dark map of where the city is, tinted to match the weather, with a link to the full map on OpenStreetMap
 * 🕒 The city's local date and time
 * 🎨 Glass-style UI whose background changes with the weather (clear, night, clouds, rain, storm, snow, mist)
+* 🌦️ A 3D weather scene behind the page, drawn with Three.js from the real conditions: a sun or moon, clouds at three depths, mist, rain, snow and lightning. Searching another city blends one weather into the next. See [3D weather scene](#-3d-weather-scene)
 * ✨ Lots of pure-CSS animation: numbers count up, the compass needle swings to the wind, the sun climbs its arc, shooting stars cross the night sky, and searches glide smoothly into their results. All of it stops for people who turn on reduced motion
-* 📱 Responsive down to small phones, with no JavaScript
+* 📱 Responsive down to small phones. Everything works without JavaScript; the 3D scene is an extra layer on top
 * ⚠️ Clear messages for unknown cities, missing or rejected API keys, and network problems
 
 ---
@@ -24,7 +25,7 @@ A clean, minimal weather app built with Django. Search any city in the world to 
 ## 🛠️ Tech Stack
 
 * **Backend:** Python 3.12+, Django 6.1
-* **Frontend:** Django templates and plain CSS
+* **Frontend:** Django templates and plain CSS, plus [Three.js](https://threejs.org/) r186 for the 3D weather scene (vendored as a static file, so there is no npm or build step)
 * **APIs:** OpenWeather (current weather and air quality), Open-Meteo (UV and hourly forecast, no key needed), Groq or Hugging Face Inference Providers (AI notes)
 
 ---
@@ -152,8 +153,58 @@ SkySnap-Weather-Website-/
     │   ├── tests.py
     │   └── templates/base/home.html
     ├── templates/main.html   # Base page layout
-    └── static/               # CSS and logo
+    └── static/
+        ├── css/style.css
+        ├── img/logo.svg
+        └── js/
+            ├── vendor/       # Three.js (trimmed build) and how to rebuild it
+            └── weather/      # The 3D weather scene
+                ├── boot.js         # Entry point: checks the device, loads the rest
+                ├── mapper.js       # OpenWeather conditions -> scene
+                ├── scenes.js       # One preset per kind of weather
+                ├── manager.js      # Blends one weather into the next
+                ├── capability.js   # Quality tier for this device
+                ├── engine.js       # Puts the layers on the stage
+                ├── three/          # Renderer and loop, shaders, particles, textures
+                └── layers/         # Sun, stars, clouds, mist, rain, snow, motes, lightning
 ```
+
+---
+
+## 🌦️ 3D Weather Scene
+
+Behind the page sits a transparent Three.js canvas that draws the city's weather in 3D. The CSS sky stays underneath, and the scene only adds the weather to it.
+
+**How the weather is chosen.** `build_weather()` passes the page a few raw readings as JSON: OpenWeather's condition code, the condition name, the icon, cloud cover, wind, visibility and how far through its day the sun is. There is no second API request. `mapper.js` picks a scene from the condition code first, because the code says how heavy rain or snow is. If the code is missing, it falls back to the condition's name, then the page's sky theme, and finally a quiet default scene:
+
+| OpenWeather | Scene |
+| ----------- | ----- |
+| 800 Clear (01d / 01n) | Sunny / clear night |
+| 801–802 Few or scattered clouds | Sunny or clear night, with some clouds |
+| 803–804 Broken or overcast | Cloudy |
+| 3xx Drizzle, 5xx Rain | Rain (drizzle has finer, slower drops; heavier codes bring more rain) |
+| 2xx Thunderstorm | Storm: heavy rain and occasional lightning |
+| 6xx Snow, sleet | Snow (sleet mixes in some rain) |
+| 7xx Mist, fog, haze, smoke, dust, sand, ash | Mist, tinted for smoke, dust and sand |
+| Anything unknown | Default twilight |
+
+The readings then fine-tune the scene: cloud cover sets how much sky is clouded, the wind slants the rain and moves the clouds, low visibility thickens the mist, and the sun sits lower and warmer near sunrise and sunset.
+
+**Transitions.** Each search loads a new page, so the scene on screen is saved to `sessionStorage` as you leave. The next page starts from it and blends to its own weather over about two seconds, in order. Going from sun to rain, the sun fades, clouds gather, the air darkens, and then the rain begins. The CSS sky colours blend over the same stretch.
+
+**Performance.** All particle movement happens on the GPU, so a frame costs a few uniform updates however much rain is falling. Nothing is allocated while the scene runs. Three.js is only downloaded on devices that will draw the scene. Phones get fewer particles, a canvas at CSS-pixel resolution and 30 frames a second. Quality steps down by itself if frames run slow. The scene pauses when the tab is hidden, and with reduced motion it draws a single still frame instead of animating.
+
+**Fallback.** Without WebGL 2, with data saver on, or if anything fails, the canvas is never shown and the page keeps its CSS sky, exactly as before.
+
+**Try each look** by adding these to any page's address:
+
+| Parameter | What it does |
+| --------- | ------------ |
+| `?scene=sunny` | Previews a scene: `sunny`, `night`, `cloudy`, `rain`, `storm`, `snow`, `mist` or `default`. Combine it with a city, for example `?city_name=London&scene=snow` |
+| `?sky3d=off` | Turns the 3D scene off, to see the CSS fallback |
+| `?sky3d=low` | Forces a quality tier (`low`, `medium` or `high`), even on software rendering |
+
+Load one preview and then another (for example `?scene=sunny`, then `?scene=rain`) to watch a transition.
 
 ---
 
